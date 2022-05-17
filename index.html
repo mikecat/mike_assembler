@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>MikeAssembler (Multiple Instruction Kindly Emitting Assembler)</title>
+<style>
+<!--
+div.table_div {
+	width: 100%;
+}
+
+@media screen and (min-width: 1000px) {
+	div.table_div {
+		display: table;
+		table-layout: fixed;
+	}
+
+	div.table_div > div {
+		display: table-cell;
+	}
+}
+
+textarea.codearea {
+	width: 95%;
+	height: 40vh;
+	font-family: monospace;
+}
+
+table.table_with_border {
+	border-collapse: collapse;
+}
+
+table.table_with_border td {
+	border: 1px solid black;
+	padding: 0.2em;
+}
+
+input[type="radio"]:not(:first-child) {
+	margin-left: 1em;
+}
+-->
+</style>
+</head>
+<body>
+<h1>MikeAssembler</h1>
+<div class="table_div">
+<div>
+<h2 id="title_source">source (input)</h2>
+<p><textarea class="codearea" id="source_area" rows="20" cols="100"></textarea></p>
+<p><input type="button" id="assemble_button" value="Assemble" style="font-size: 125%; padding: 0.5em 0.7em;"></p>
+
+<h2 id="title_output_settings">output settings</h2>
+<form id="setting_form" method="POST" action="http://999.999.999.999/" onsubmit="return false;">
+<table class="table_with_border">
+<tr><td id="output_settings_output_format">output format</td><td>
+<input type="radio" name="output_format" value="obo" id="output_format_obo" checked="checked"><label for="output_format_obo">one-by-one</label>
+<input type="radio" name="output_format" value="dump" id="output_format_dump"><label for="output_format_dump">dump</label>
+<input type="radio" name="output_format" value="ihex" id="output_format_ihex"><label for="output_format_ihex">ihex</label>
+<input type="radio" name="output_format" value="base64" id="output_format_base64"><label for="output_format_base64">base64</label>
+</td></tr>
+<tr><td id="output_settings_word_size">word size</td><td>
+<input type="radio" name="word_size" value="auto" id="word_size_auto" checked="checked"><label for="word_size_auto">auto</label>
+<input type="radio" name="word_size" value="1" id="word_size_1"><label for="word_size_1">1</label>
+<input type="radio" name="word_size" value="2" id="word_size_2"><label for="word_size_2">2</label>
+<input type="radio" name="word_size" value="4" id="word_size_4"><label for="word_size_4">4</label>
+<input type="radio" name="word_size" value="8" id="word_size_8"><label for="word_size_8">8</label>
+</td></tr>
+<tr><td id="output_settings_endianness">endianness</td><td>
+<input type="radio" name="endianness" value="little" id="endianness_little" checked="checked"><label for="endianness_little">little</label>
+<input type="radio" name="endianness" value="big" id="endianness_big"><label for="endianness_big">big</label>
+</td></tr>
+<tr><td id="output_settings_default_byte">default byte</td><td>
+<input type="radio" name="default_byte" value="0" id="default_byte_0" checked="checked"><label for="default_byte_0">0x00</label>
+<input type="radio" name="default_byte" value="255" id="default_byte_255"><label for="default_byte_255">0xff</label>
+<input type="radio" name="default_byte" value="other" id="default_byte_other"><label for="default_byte_other">other:</label><input type="text" value="" name="default_byte_other_value" size="6" style="margin-left: 0.2em;">
+</td></tr>
+<tr><td id="output_settings_address_format">address format</td><td>
+<input type="radio" name="address_format" value="2" id="address_format_binary"><label for="address_format_binary">binary</label>
+<input type="radio" name="address_format" value="10" id="address_format_decimal"><label for="address_format_decimal">decimal</label>
+<input type="radio" name="address_format" value="16" id="address_format_hex" checked="checked"><label for="address_format_hex">hex</label>
+</td></tr>
+<tr><td id="output_settings_data_format">data format</td><td>
+<input type="radio" name="data_format" value="2" id="data_format_binary"><label for="data_format_binary">binary</label>
+<input type="radio" name="data_format" value="10" id="data_format_decimal"><label for="data_format_decimal">decimal</label>
+<input type="radio" name="data_format" value="16" id="data_format_hex" checked="checked"><label for="data_format_hex">hex</label>
+</td></tr>
+</table>
+</form>
+
+</div>
+<div>
+<h2 id="title_output">output</h2>
+<p><textarea class="codearea" id="output_area" rows="20" cols="100" readonly="readonly"></textarea></p>
+
+<h2 id="title_messages">messages</h2>
+<p><textarea class="codearea" style="height: 20vh;" id="message_area" rows="10" cols="100" readonly="readonly"></textarea></p>
+</div>
+</div>
+</body>
+</html>
