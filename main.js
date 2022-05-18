@@ -1,6 +1,27 @@
 "use strict";
 
 const mikeAssembler = (function() {
+	const isBigIntSupported = function() {
+		try {
+			BigInt(0);
+			return true;
+		} catch(e) {
+			return false;
+		}
+	};
+
+	const toBigInt = isBigIntSupported() ? function(v) {
+		return BigInt(v);
+	} : function(v) {
+		return Number(v) | 0;
+	};
+
+	const fromBigInt = isBigIntSupported() ? function(v) {
+		return Number(v);
+	} : function(v) {
+		return v;
+	};
+
 	const parseLine = function(line) {
 		// タブを空白に変換する
 		const tabStop = 4;
@@ -130,7 +151,8 @@ const mikeAssembler = (function() {
 			opSet[ops[i]] = true;
 			if (ops[i].length == 1) stopSet[ops[i]] = true;
 		}
-		stopSet["\""] =true; stopSet["'"] = true; stopSet["="] = true;
+		stopSet["\""] = true; stopSet["'"] = true; stopSet["="] = true;
+		stopSet[" "] = true; stopSet["\t"] = true;
 		for (let i = 0; i < expr.length; i++) {
 			const c = expr.substring(i, i + 1);
 			const cc = expr.substring(i, i + 2);
@@ -260,7 +282,7 @@ const mikeAssembler = (function() {
 			};
 		};
 		const lv11 = function(ts) {
-			const uops = {"!": true, "+": true, "-": true};
+			const uops = {"!": true, "~": true, "+": true, "-": true};
 			if (ts.length > 0 && ts[0].kind === "op" && (ts[0].token in uops)) {
 				const res = lv11(ts.slice(1));
 				const ast = res.ast, left = res.left;
@@ -345,6 +367,144 @@ const mikeAssembler = (function() {
 		return res.ast;
 	};
 
+	const parseString = function(str) {
+		if (str.length < 2 || str.charAt(0) != str.charAt(str.length - 1) || (str.charAt(0) != "\"" && str.charAt(0) != "'")) {
+			throw "not a string";
+		}
+		const eseqs = {
+			"\\": 0x5c, "r": 0x0d, "n": 0x0a, "t": 0x09, "0": 0x00, "\"": 0x22, "'": 0x27
+		};
+		const res = [];
+		for (let i = 1; i < str.length - 1; i++) {
+			if (str.charAt(i) == "\\" && (str.charAt(i + 1) in eseqs)) {
+				res.push(eseqs[str.charAt(i + 1)]);
+				i++;
+			} else if (/^\\x[0-9a-f]{2}/i.test(str.substring(i))) {
+				res.push(parseInt(str.substring(i + 2, i + 4), 16));
+				i += 3;
+			} else {
+				let c = str.charCodeAt(i);
+				const c2 = str.charCodeAt(i + 1);
+				if (0xd800 <= c && c <= 0xdbff && 0xdc00 <= c2 && c2 <= 0xdfff) {
+					// サロゲートペア
+					c = 0x10000 + (c - 0xd800) * 0x400 + (c2 - 0xdc00);
+					i++;
+				}
+				if (c < 0x80) {
+					res.push(c);
+				} else if (c < 0x800) {
+					res.push(0xc0 | ((c >> 6) & 0x1f));
+					res.push(0x80 | (c & 0x3f));
+				} else if (c < 0x10000) {
+					res.push(0xe0 | ((c >> 12) & 0x0f));
+					res.push(0x80 | ((c >> 6) & 0x3f));
+					res.push(0x80 | (c & 0x3f));
+				} else {
+					res.push(0xf0 | ((c >> 18) & 0x07));
+					res.push(0x80 | ((c >> 12) & 0x3f));
+					res.push(0x80 | ((c >> 6) & 0x3f));
+					res.push(0x80 | (c & 0x3f));
+				}
+			}
+		}
+		return res;
+	};
+
+	const binOpsForEvaluate = {
+		"*": function(a, b) { return a * b; },
+		"/": function(a, b) {
+			if (b === toBigInt(0)) throw "division by zero";
+			return (a / b) | toBigInt(0);
+		},
+		"%": function(a, b) {
+			if (b === toBigInt(0)) throw "division by zero";
+			return a % b;
+		},
+		"+": function(a, b) { return a + b; },
+		"-": function(a, b) { return a - b; },
+		"<<": function(a, b) { return a << b; },
+		">>": function(a, b) { return a >> b; },
+		"&": function(a, b) { return a & b; },
+		"|": function(a, b) { return a | b; },
+		"^": function(a, b) { return a ^ b; },
+		"<": function(a, b) { return toBigInt(a < b ? 1 : 0); },
+		">": function(a, b) { return toBigInt(a > b ? 1 : 0); },
+		"<=": function(a, b) { return toBigInt(a <= b ? 1 : 0); },
+		">=": function(a, b) { return toBigInt(a >= b ? 1 : 0); },
+		"==": function(a, b) { return toBigInt(a === b ? 1 : 0); },
+		"!=": function(a, b) { return toBigInt(a !== b ? 1 : 0); }
+	};
+
+	const evaluate = function(ast, vars, hook = null) {
+		const hooked = hook === null ? null : hook(ast, vars);
+		if (hooked !== null) return hooked;
+		if (ast.kind === "value") {
+			if (/^[0-9]+$/.test(ast.value) || /^0o[0-7]+$/i.test(ast.value) ||
+			/^0x[0-9a-f]+$/i.test(ast.value) || /^0b[01]+$/i.test(ast.value)) {
+				return toBigInt(ast.value);
+			} else if (ast.value in vars) {
+				return vars[ast.value];
+			} else {
+				throw "undefined identifier: " + ast.value;
+			}
+		} else if (ast.kind === "str") {
+			if (ast.value.charAt(0) === "'") {
+				const eseqs = {
+					"\\": 0x5c, "r": 0x0d, "n": 0x0a, "t": 0x09, "0": 0x00, "\"": 0x22, "'": 0x27
+				};
+				if (ast.value.length == 4 && ast.value.charAt(1) == "\\" && (ast.value.charAt(2) in eseqs)) {
+					return toBigInt(eseqs[ast.value.charAt(2)]);
+				} else if (/^'\\x[0-9a-f]{2}'$/i.test(ast.value)) {
+					return toBigInt(parseInt(ast.value.substring(3, 5), 16));
+				} else {
+					const c = ast.value.charCodeAt(1), c2 = ast.value.charCodeAt(2);
+					if (ast.value.length === 4 && 0xd800 <= c && c <= 0xdbff && 0xdc00 <= c2 && c2 <= 0xdfff) {
+						// サロゲートペア
+						return toBigInt(0x10000 + (c - 0xd800) * 0x400 + (c2 - 0xdc00));
+					} else if (ast.value.length === 3) {
+						return toBigInt(c);
+					}
+				}
+				throw "invalid character constant";
+			}
+		} else if (ast.kind === "op") {
+			if (ast.children.length === 2) {
+				if (ast.value in binOpsForEvaluate) {
+					const v1 = evaluate(ast.children[0], vars, hook);
+					const v2 = evaluate(ast.children[1], vars, hook);
+					return binOpsForEvaluate[ast.value](v1, v2);
+				} else if (ast.value === "&&") {
+					const v1 = evaluate(ast.children[0], vars, hook);
+					if (v1 === toBigInt(0)) return toBigInt(0);
+					const v2 = evaluate(ast.children[1], vars, hook);
+					return toBigInt(v2 === toBigInt(0) ? 0 : 1);
+				} else if (ast.value === "||") {
+					const v1 = evaluate(ast.children[0], vars, hook);
+					if (v1 !== toBigInt(0)) return toBigInt(1);
+					const v2 = evaluate(ast.children[1], vars, hook);
+					return toBigInt(v2 === toBigInt(0) ? 0 : 1);
+				}
+			} else if (ast.children.length === 1) {
+				const v = evaluate(ast.children[0], vars, hook);
+				if (ast.value === "!") {
+					return toBigInt(v === toBigInt(0) ? 1 : 0);
+				} else if (ast.value === "~") {
+					return ~v;
+				} else if (ast.value === "-") {
+					return -v;
+				}  else if (ast.value === "+" || ast.value === "()") {
+					return v;
+				}
+			} else if (ast.children.length === 3 && ast.value === "?:") {
+				const v = evaluate(ast.children[0], vars, hook);
+				return evaluate(ast.children[v === toBigInt(0) ? 2 : 1], vars, hook);
+			}
+		} else {
+			throw "unknown kind of node: " + ast.kind;
+		}
+		throw "undefined operation";
+	};
+
 	const assemble = function(source, outputConfig) {
 		const lines = source.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
 		let output = "";
@@ -357,6 +517,13 @@ const mikeAssembler = (function() {
 					outputPart = JSON.stringify(tokenize(lineParts.ops[0]));
 				} else if (lineParts.inst === "parse" && lineParts.ops.length === 1) {
 					outputPart = JSON.stringify(parse(tokenize(lineParts.ops[0])));
+				} else if (lineParts.inst === "calc" && lineParts.ops.length === 1) {
+					const parsed = parse(tokenize(lineParts.ops[0]));
+					if (parsed.kind === "str") {
+						outputPart = JSON.stringify(parseString(parsed.value));
+					} else {
+						outputPart = "" + evaluate(parsed, {});
+					}
 				} else {
 					outputPart = JSON.stringify(lineParts);
 				}
@@ -373,8 +540,13 @@ const mikeAssembler = (function() {
 	};
 
 	return {
+		"isBigIntSupported": isBigIntSupported,
+		"toBigInt": toBigInt,
+		"fromBigInt": fromBigInt,
 		"tokenize": tokenize,
 		"parse": parse,
+		"parseString": parseString,
+		"evaluate": evaluate,
 		"assemble": assemble
 	};
 })();
