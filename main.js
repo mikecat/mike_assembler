@@ -638,11 +638,15 @@ const mikeAssembler = (function() {
 				"data": [],
 				"wordSize": 1
 			};
-		} else if (/^data[bwlq]?$/.test(instLower)) {
+		} else if (/^data[nbwlq]?$/.test(instLower)) {
 			if (ops.length === 0) throw "no data";
 			let wordSize, rangeMin, rangeMax;
 			const kind = instLower.charAt(4);
-			if (kind === "w") {
+			if (kind === "n") {
+				wordSize = 0;
+				rangeMin = -0x8;
+				rangeMax = 0xf;
+			} else if (kind === "w") {
 				wordSize = 2;
 				rangeMin = -0x8000;
 				rangeMax = 0xffff;
@@ -665,7 +669,13 @@ const mikeAssembler = (function() {
 				if (ast.kind === "str" && ast.value.charAt(0) === "\"") {
 					const data = parseString(ast.value);
 					while (data.length % wordSize != 0) data.push(0);
-					if (context.endianness === "big") {
+					if (wordSize <= 0) {
+						for (let i = 0; i < data.length; i++) {
+							let word = toBigInt(data[i]);
+							if (word < rangeMin || rangeMax < word) throw "data out of range";
+							dataArray.push(word);
+						}
+					} else if (context.endianness === "big") {
 						for (let i = 0; i < data.length; i += wordSize) {
 							let word = toBigInt(0);
 							for (let j = 0; j < wordSize; j++) {
@@ -689,7 +699,7 @@ const mikeAssembler = (function() {
 				}
 			}
 			return {
-				"nextPos": pos + toBigInt(wordSize) * toBigInt(dataArray.length),
+				"nextPos": pos + toBigInt(wordSize < 1 ? 1 : wordSize) * toBigInt(dataArray.length),
 				"data": dataArray,
 				"wordSize": wordSize
 			};
@@ -699,7 +709,15 @@ const mikeAssembler = (function() {
 
 	const wordsToData = function(words, wordSize, endianness) {
 		const res = [];
-		if (endianness === "big") {
+		if (wordSize <= 0) {
+			for (let i = 0; i < words.length; i++) {
+				if (words[i] === null) {
+					res.push(null);
+				} else {
+					res.push(fromBigInt(words[i] & toBigInt(0xff)));
+				}
+			}
+		} else if (endianness === "big") {
 			for (let i = 0; i < words.length; i++) {
 				if (words[i] === null) {
 					for (let j = 0; j < wordSize; j++) res.push(null);
