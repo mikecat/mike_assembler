@@ -19,7 +19,7 @@ const mikeAssembler = (function() {
 	const fromBigInt = isBigIntSupported() ? function(v) {
 		return Number(v);
 	} : function(v) {
-		return v;
+		return v | 0;
 	};
 
 	const parseLine = function(line) {
@@ -435,7 +435,7 @@ const mikeAssembler = (function() {
 		"!=": function(a, b) { return toBigInt(a !== b ? 1 : 0); }
 	};
 
-	const evaluate = function(ast, vars, hook = null) {
+	const evaluate = function(ast, vars, throwOnUndefinedIdentifier = true, hook = null) {
 		const hooked = hook === null ? null : hook(ast, vars);
 		if (hooked !== null) return hooked;
 		if (ast.kind === "value") {
@@ -443,9 +443,14 @@ const mikeAssembler = (function() {
 			/^0x[0-9a-f]+$/i.test(ast.value) || /^0b[01]+$/i.test(ast.value)) {
 				return toBigInt(ast.value);
 			} else if (ast.value in vars) {
+				if (throwOnUndefinedIdentifier && vars[ast.value] === null) {
+					throw "value of " + ast.value + " isn't defined";
+				}
 				return vars[ast.value];
-			} else {
+			} else if (throwOnUndefinedIdentifier) {
 				throw "undefined identifier: " + ast.value;
+			} else {
+				return null;
 			}
 		} else if (ast.kind === "str") {
 			if (ast.value.charAt(0) === "'") {
@@ -472,20 +477,26 @@ const mikeAssembler = (function() {
 				if (ast.value in binOpsForEvaluate) {
 					const v1 = evaluate(ast.children[0], vars, hook);
 					const v2 = evaluate(ast.children[1], vars, hook);
+					if (v1 === null || v2 === null) return null;
 					return binOpsForEvaluate[ast.value](v1, v2);
 				} else if (ast.value === "&&") {
 					const v1 = evaluate(ast.children[0], vars, hook);
+					if (v1 === null) return null;
 					if (v1 === toBigInt(0)) return toBigInt(0);
 					const v2 = evaluate(ast.children[1], vars, hook);
+					if (v2 === null) return null;
 					return toBigInt(v2 === toBigInt(0) ? 0 : 1);
 				} else if (ast.value === "||") {
 					const v1 = evaluate(ast.children[0], vars, hook);
+					if (v1 === null) return null;
 					if (v1 !== toBigInt(0)) return toBigInt(1);
 					const v2 = evaluate(ast.children[1], vars, hook);
+					if (v2 === null) return null;
 					return toBigInt(v2 === toBigInt(0) ? 0 : 1);
 				}
 			} else if (ast.children.length === 1) {
 				const v = evaluate(ast.children[0], vars, hook);
+				if (v === null) return null;
 				if (ast.value === "!") {
 					return toBigInt(v === toBigInt(0) ? 1 : 0);
 				} else if (ast.value === "~") {
@@ -497,6 +508,7 @@ const mikeAssembler = (function() {
 				}
 			} else if (ast.children.length === 3 && ast.value === "?:") {
 				const v = evaluate(ast.children[0], vars, hook);
+				if (v === null) return null;
 				return evaluate(ast.children[v === toBigInt(0) ? 2 : 1], vars, hook);
 			}
 		} else {
@@ -505,33 +517,291 @@ const mikeAssembler = (function() {
 		throw "undefined operation";
 	};
 
-	const assemble = function(source, outputConfig) {
-		const lines = source.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
-		let output = "";
-		let message = "";
-		for (let i = 0; i < lines.length; i++) {
-			let outputPart = "";
-			try {
-				const lineParts = parseLine(lines[i]);
-				if (lineParts.inst === "tokenize" && lineParts.ops.length === 1) {
-					outputPart = JSON.stringify(tokenize(lineParts.ops[0]));
-				} else if (lineParts.inst === "parse" && lineParts.ops.length === 1) {
-					outputPart = JSON.stringify(parse(tokenize(lineParts.ops[0])));
-				} else if (lineParts.inst === "calc" && lineParts.ops.length === 1) {
-					const parsed = parse(tokenize(lineParts.ops[0]));
-					if (parsed.kind === "str") {
-						outputPart = JSON.stringify(parseString(parsed.value));
+	const builtins = function(pos, inst, ops, context) {
+		const instLower = inst.toLowerCase();
+		if (instLower === "org") {
+			if (ops.length !== 1) throw "org takes exactly 1 argument";
+			const nextPos = evaluate(parse(tokenize(ops[0])), context.vars);
+			if (nextPos < 0) throw "invalid position";
+			return {
+				"nextPos": nextPos,
+				"data": [],
+				"wordSize": 1
+			};
+		} else if (instLower === "outstart") {
+			if (ops.length !== 1) throw "outstart takes exactly 1 argument";
+			const startPos = evaluate(parse(tokenize(ops[0])), context.vars);
+			if (startPos < 0) throw "invalid position";
+			if (context.outStart !== null && context.outStart !== startPos) throw "multiple outstart";
+			context.outStart = startPos;
+			return {
+				"nextPos": pos,
+				"data": [],
+				"wordSize": 1
+			};
+		} else if (instLower === "align") {
+			if (ops.length !== 1 && ops.length !== 2) throw "align takes 1 or 2 arguments";
+			const divisor = evaluate(parse(tokenize(ops[0])), context.vars);
+			if (divisor <= 0) throw "invalid divisor";
+			const remainder = ops.length < 2 ? toBigInt(0) : evaluate(parse(tokenize(ops[1])), context.vars);
+			if (remainder < 0 || divisor <= remainder) throw "invalid remainder";
+			const nextPos = pos % divisor === remainder ? pos : pos + (divisor - (pos + divisor - remainder) % divisor);
+			return {
+				"nextPos": nextPos,
+				"data": [],
+				"wordSize": 1
+			};
+		} else if (instLower === "alignfill") {
+			if (ops.length !== 1 && ops.length !== 2) throw "alignfill takes 2 or 3 arguments";
+			const divisor = evaluate(parse(tokenize(ops[0])), context.vars);
+			if (divisor <= 0) throw "invalid divisor";
+			const data = evaluate(parse(tokenize(ops[1])), context.vars, context.pass !== 1);
+			if (data !== null && (data < -0x80 || 0xff < data)) throw "data out of range";
+			const remainder = ops.length < 3 ? toBigInt(0) : evaluate(parse(tokenize(ops[2])), context.vars);
+			if (remainder < 0 || divisor <= remainder) throw "invalid remainder";
+			const nextPos = pos % divisor === remainder ? pos : pos + (divisor - (pos + divisor - remainder) % divisor);
+			const dataArray = [];
+			for (let i = pos; i < nextPos; i++) dataArray.push(data);
+			return {
+				"nextPos": nextPos,
+				"data": dataArray,
+				"wordSize": 1
+			};
+		} else if (instLower === "space") {
+			if (ops.length !== 1) throw "space takes exactly 1 argument";
+			const spaceSize = evaluate(parse(tokenize(ops[0])), context.vars);
+			if (spaceSize < 0) throw "invalid size";
+			return {
+				"nextPos": pos + spaceSize,
+				"data": [],
+				"wordSize": 1
+			};
+		} else if (instLower === "fill") {
+			if (ops.length !== 2) throw "fill takes exactly 2 arguments";
+			const fillSize = evaluate(parse(tokenize(ops[0])), context.vars);
+			if (fillSize < 0) throw "invalid size";
+			const data = evaluate(parse(tokenize(ops[1])), context.vars, context.pass !== 1);
+			if (data !== null && (data < -0x80 || 0xff < data)) throw "data out of range";
+			const dataArray = [];
+			for (let i = 0; i < fillSize; i++) dataArray.push(data);
+			return {
+				"nextPos": pos + fillSize,
+				"data": dataArray,
+				"wordSize": 1
+			};
+		} else if (instLower === "fillto") {
+			if (ops.length !== 2) throw "fillto takes exactly 2 arguments";
+			const nextPos = evaluate(parse(tokenize(ops[0])), context.vars);
+			if (nextPos < pos) throw "filling backward isn't allowed";
+			const data = evaluate(parse(tokenize(ops[1])), context.vars, context.pass !== 1);
+			if (data !== null && (data < -0x80 || 0xff < data)) throw "data out of range";
+			const dataArray = [];
+			for (let i = pos; i < nextPos; i++) dataArray.push(data);
+			return {
+				"nextPos": nextPos,
+				"data": dataArray,
+				"wordSize": 1
+			};
+		} else if (instLower === "endianness") {
+			if (ops.length !== 1) throw "endianness takes exactly 1 argument";
+			const eLower = ops[0].toLowerCase();
+			if (eLower !== "little" && eLower !== "big") throw "invalid endianness: " + eLower;
+			context.endianness = eLower;
+			return {
+				"nextPos": pos,
+				"data": [],
+				"wordSize": 1
+			};
+		} else if (instLower === "define") {
+			if (ops.length !== 2) throw "define takes exactly 2 arguments";
+			if (ops[0] in context.vars) {
+				throw "duplicate definition of " + ops[0];
+			}
+			const value = evaluate(parse(tokenize(ops[1])), context.vars, context.pass !== 1);
+			context.vars[ops[0]] = value;
+			context.defines[ops[0]] = value;
+			return {
+				"nextPos": pos,
+				"data": [],
+				"wordSize": 1
+			};
+		} else if (instLower === "redefine") {
+			if (ops.length !== 2) throw "redefine takes exactly 2 arguments";
+			if (!(ops[0] in context.defines)) {
+				throw ops[0] + "is not defined";
+			}
+			const value = evaluate(parse(tokenize(ops[1])), context.vars, context.pass !== 1);
+			context.vars[ops[0]] = value;
+			context.defines[ops[0]] = value;
+			return {
+				"nextPos": pos,
+				"data": [],
+				"wordSize": 1
+			};
+		} else if (/^data[bwlq]?$/.test(instLower)) {
+			if (ops.length === 0) throw "no data";
+			let wordSize, rangeMin, rangeMax;
+			const kind = instLower.charAt(4);
+			if (kind === "w") {
+				wordSize = 2;
+				rangeMin = -0x8000;
+				rangeMax = 0xffff;
+			} else if (kind === "l") {
+				wordSize = 4;
+				rangeMin = -0x80000000;
+				rangeMax = 0xffffffff;
+			} else if (kind === "q") {
+				wordSize = 8;
+				rangeMin = -toBigInt("0x8000000000000000");
+				rangeMax = toBigInt("0xffffffffffffffff");
+			} else {
+				wordSize = 1;
+				rangeMin = -0x80;
+				rangeMax = 0xff;
+			}
+			const dataArray = [];
+			for (let i = 0; i < ops.length; i++) {
+				const ast = parse(tokenize(ops[i]));
+				if (ast.kind === "str" && ast.value.charAt(0) === "\"") {
+					const data = parseString(ast.value);
+					while (data.length % wordSize != 0) data.push(0);
+					if (context.endianness === "big") {
+						for (let i = 0; i < data.length; i += wordSize) {
+							let word = toBigInt(0);
+							for (let j = 0; j < wordSize; j++) {
+								word = (word << toBigInt(8)) | toBigInt(data[i + j]);
+							}
+							dataArray.push(word);
+						}
 					} else {
-						outputPart = "" + evaluate(parsed, {});
+						for (let i = 0; i < data.length; i += wordSize) {
+							let word = toBigInt(0);
+							for (let j = 1; j <= wordSize; j++) {
+								word = (word << toBigInt(8)) | toBigInt(data[i + wordSize - j]);
+							}
+							dataArray.push(word);
+						}
 					}
 				} else {
-					outputPart = JSON.stringify(lineParts);
+					const data = evaluate(ast, context.vars, context.pass !== 1);
+					if (data !== null && (data < rangeMin || rangeMax < data)) throw "data out of range";
+					dataArray.push(data);
 				}
-			} catch (e) {
-				message += "line " + (i + 1) + ": " + e + "\n";
 			}
-			output += outputPart + "\n";
+			return {
+				"nextPos": pos + toBigInt(wordSize) * toBigInt(dataArray.length),
+				"data": dataArray,
+				"wordSize": wordSize
+			};
 		}
+		return null;
+	};
+
+	const wordsToData = function(words, wordSize, endianness) {
+		const res = [];
+		if (endianness === "big") {
+			for (let i = 0; i < words.length; i++) {
+				if (words[i] === null) {
+					for (let j = 0; j < wordSize; j++) res.push(null);
+				} else {
+					for (let j = 1; j <= wordSize; j++) {
+						res.push(fromBigInt((words[i] >> (toBigInt(8 * (wordSize - j)))) & toBigInt(0xff)));
+					}
+				}
+			}
+		} else {
+			for (let i = 0; i < words.length; i++) {
+				if (words[i] === null) {
+					for (let j = 0; j < wordSize; j++) res.push(null);
+				} else {
+					for (let j = 0; j < wordSize; j++) {
+						res.push(fromBigInt((words[i] >> (toBigInt(8 * j))) & toBigInt(0xff)));
+					}
+				}
+			}
+		}
+		return res;
+	};
+
+	const assemble = function(source, outputConfig) {
+		const lines = source.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+		let pos = toBigInt(0);
+		const context = {};
+		let outputParts = [];
+		let message = "";
+		let error = false;
+		for (let pass = 1; !error && pass <= 2; pass++) {
+			pos = toBigInt(0);
+			context.pass = pass;
+			context.outStart = null;
+			context.endianness = "little";
+			context.vars = {};
+			context.defines = {};
+			if (pass === 1) {
+				context.labels = {};
+				context.labelArray = [];
+			} else {
+				const labels = context.labelArray;
+				for (let i = 0; i < labels.length; i++) {
+					context.vars[labels[i]] = context.labels[labels[i]];
+				}
+			}
+			outputParts = [];
+			message = "";
+
+			for (let i = 0; i < lines.length; i++) {
+				try {
+					const lineParsed = parseLine(lines[i]);
+					if (lineParsed.label !== null) {
+						if (lineParsed.label in context.labels) {
+							if (pos !== context.labels[lineParsed.label]) {
+								throw "multiple definitions of " + lineParsed.label;
+							}
+						} else if (lineParsed.label in context.vars) {
+							throw "multiple definitions of " + lineParsed.label;
+						} else {
+							context.vars[lineParsed.label] = pos;
+							context.labels[lineParsed.label] = pos;
+							context.labelArray.push(lineParsed.label);
+						}
+					}
+					if (lineParsed.inst !== null) {
+						let res = builtins(pos, lineParsed.inst, lineParsed.ops, context);
+						if (res === null) {
+							// TODO: ターゲットごとの変換
+						}
+						if (res === null) {
+							throw "undefined instruction: " + lineParsed.inst;
+						}
+						outputParts.push({
+							"line": lineParsed.line,
+							"lineno": i + 1,
+							"pos": pos,
+							"data": wordsToData(res.data, res.wordSize, context.endianness),
+							"wordSize": res.wordSize
+						});
+						pos = res.nextPos;
+					} else if (lineParsed.label !== null) {
+						outputParts.push({
+							"line": lineParsed.line,
+							"lineno": i + 1,
+							"pos": pos,
+							"data": [],
+							"wordSize": 1
+						});
+					};
+				} catch (e) {
+					message += "line " + (i + 1) + ": " + e + "\n";
+					error = true;
+				}
+			}
+		}
+		const output = JSON.stringify(outputParts, function(key, value) {
+			if ((typeof value) === "bigint") {
+				return value.toString();
+			}
+			return value;
+		});
 
 		return {
 			"output": output,
