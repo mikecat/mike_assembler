@@ -799,7 +799,7 @@ const mikeAssembler = (function() {
 							"wordSize": res.wordSize
 						});
 						pos = res.nextPos;
-					} else if (lineParsed.label !== null) {
+					} else {
 						outputParts.push({
 							"line": lineParsed.line,
 							"lineno": i + 1,
