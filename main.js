@@ -742,7 +742,7 @@ const mikeAssembler = (function() {
 	};
 
 	const assemble = function(source, outputConfig) {
-		const lines = source.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+		const lines = source.replace(/\r\n/g, "\n").replace(/\r/g, "\n").replace(/\n+$/, "").split("\n");
 		let pos = toBigInt(0);
 		const context = {};
 		let outputParts = [];
