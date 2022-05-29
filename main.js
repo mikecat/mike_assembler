@@ -842,33 +842,38 @@ const mikeAssembler = (function() {
 	};
 })();
 
-window.addEventListener("DOMContentLoaded", function() {
-	const sourceArea = document.getElementById("source_area");
-	const assembleButton = document.getElementById("assemble_button");
-	const settingForm = document.getElementById("setting_form");
-	const outputArea = document.getElementById("output_area");
-	const messageArea = document.getElementById("message_area");
+if ((typeof window) !== "undefined") {
+	window.addEventListener("DOMContentLoaded", function() {
+		const sourceArea = document.getElementById("source_area");
+		const assembleButton = document.getElementById("assemble_button");
+		const settingForm = document.getElementById("setting_form");
+		const outputArea = document.getElementById("output_area");
+		const messageArea = document.getElementById("message_area");
 
-	const enableDefaultByteOtherValue = function() {
-		settingForm.default_byte_other_value.disabled = !(settingForm.default_byte.value === "other");
-	};
-	enableDefaultByteOtherValue();
-	const defaultByteRadios = document.querySelectorAll("form#setting_form input[type=\"radio\"][name=\"default_byte\"]");
-	for (let i = 0; i < defaultByteRadios.length; i++) {
-		defaultByteRadios[i].addEventListener("change", enableDefaultByteOtherValue);
-	}
-
-	assembleButton.addEventListener("click", function() {
-		const outputConfig = {
-			"outputFormat": settingForm.output_format.value,
-			"wordSize": settingForm.word_size.value,
-			"endianness": settingForm.endianness.value,
-			"defaultByte": settingForm.default_byte.value === "other" ? settingForm.default_byte_other_value.value : settingForm.default_byte.value,
-			"addressFormat": settingForm.address_format.value,
-			"dataFormat": settingForm.data_format.value
+		const enableDefaultByteOtherValue = function() {
+			settingForm.default_byte_other_value.disabled = !(settingForm.default_byte.value === "other");
 		};
-		const result = mikeAssembler.assemble(sourceArea.value, outputConfig);
-		outputArea.value = result.output;
-		messageArea.value = result.message;
+		enableDefaultByteOtherValue();
+		const defaultByteRadios = document.querySelectorAll("form#setting_form input[type=\"radio\"][name=\"default_byte\"]");
+		for (let i = 0; i < defaultByteRadios.length; i++) {
+			defaultByteRadios[i].addEventListener("change", enableDefaultByteOtherValue);
+		}
+
+		assembleButton.addEventListener("click", function() {
+			const outputConfig = {
+				"outputFormat": settingForm.output_format.value,
+				"wordSize": settingForm.word_size.value,
+				"endianness": settingForm.endianness.value,
+				"defaultByte": settingForm.default_byte.value === "other" ? settingForm.default_byte_other_value.value : settingForm.default_byte.value,
+				"addressFormat": settingForm.address_format.value,
+				"dataFormat": settingForm.data_format.value
+			};
+			const result = mikeAssembler.assemble(sourceArea.value, outputConfig);
+			outputArea.value = result.output;
+			messageArea.value = result.message;
+		});
 	});
-});
+}
+if ((typeof exports) !== "undefined") {
+	exports.mikeAssembler = mikeAssembler;
+}
