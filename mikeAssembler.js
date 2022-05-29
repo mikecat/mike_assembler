@@ -33,7 +33,7 @@ const mikeAssembler = (function() {
 	const outputFormats = {
 		"raw": {
 			"name": "raw",
-			"output": function(outputParts) {
+			"generateOutput": function(outputParts) {
 				return {
 					"output": JSON.stringify(outputParts, function(key, value) {
 						if ((typeof value) === "bigint") {
@@ -858,7 +858,7 @@ const mikeAssembler = (function() {
 				}
 			}
 		}
-		const output = outputFormats[outputConfig.outputFormat].output(outputParts);
+		const output = outputFormats[outputConfig.outputFormat].generateOutput(outputParts);
 
 		return {
 			"output": output.output,
