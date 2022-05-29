@@ -22,6 +22,37 @@ const mikeAssembler = (function() {
 		return v | 0;
 	};
 
+	const targets = {};
+	const registerTarget = function(target) {
+		if (target.name in targets) {
+			throw "duplicate target: " + target.name;
+		}
+		targets[target.name.toLowerCase()] = target;
+	};
+
+	const outputFormats = {
+		"raw": {
+			"name": "raw",
+			"output": function(outputParts) {
+				return {
+					"output": JSON.stringify(outputParts, function(key, value) {
+						if ((typeof value) === "bigint") {
+							return value.toString();
+						}
+						return value;
+					}),
+					"message": ""
+				};
+			}
+		}
+	};
+	const registerOutputFormat = function(of) {
+		if (of.name in outputFormats) {
+			throw "duplicate output format: " + of.name;
+		}
+		outputFormats[of.name.toLowerCase()] = of;
+	};
+
 	const parseLine = function(line) {
 		// タブを空白に変換する
 		const tabStop = 4;
@@ -604,6 +635,16 @@ const mikeAssembler = (function() {
 				"data": dataArray,
 				"wordSize": 1
 			};
+		} else if (instLower === "target") {
+			if (ops.length !== 1) throw "target takes exactly 1 argument";
+			const tLower = ops[0].toLowerCase();
+			if (!(tLower in targets)) throw "unknown target: " + tLower;
+			context.target = targets[tLower];
+			return {
+				"nextPos": pos,
+				"data": [],
+				"wordSize": 1
+			};
 		} else if (instLower === "endianness") {
 			if (ops.length !== 1) throw "endianness takes exactly 1 argument";
 			const eLower = ops[0].toLowerCase();
@@ -753,6 +794,7 @@ const mikeAssembler = (function() {
 		for (let pass = 1; !error && pass <= 2; pass++) {
 			pos = toBigInt(0);
 			context.pass = pass;
+			context.target = null;
 			context.outStart = null;
 			context.endianness = "little";
 			context.posOffset = toBigInt(0);
@@ -788,8 +830,8 @@ const mikeAssembler = (function() {
 					}
 					if (lineParsed.inst !== null) {
 						let res = builtins(pos, lineParsed.inst, lineParsed.ops, context);
-						if (res === null) {
-							// TODO: ターゲットごとの変換
+						if (res === null && context.target !== null) {
+							res = context.target.assembleLine(pos, lineParsed.inst, lineParsed.ops, context);
 						}
 						if (res === null) {
 							throw "undefined instruction: " + lineParsed.inst;
@@ -817,16 +859,11 @@ const mikeAssembler = (function() {
 				}
 			}
 		}
-		const output = JSON.stringify(outputParts, function(key, value) {
-			if ((typeof value) === "bigint") {
-				return value.toString();
-			}
-			return value;
-		});
+		const output = outputFormats[outputConfig.outputFormat].output(outputParts);
 
 		return {
-			"output": output,
-			"message": message
+			"output": output.output,
+			"message": message + output.message
 		};
 	};
 
@@ -834,6 +871,8 @@ const mikeAssembler = (function() {
 		"isBigIntSupported": isBigIntSupported,
 		"toBigInt": toBigInt,
 		"fromBigInt": fromBigInt,
+		"registerTarget": registerTarget,
+		"registerOutputFormat": registerOutputFormat,
 		"tokenize": tokenize,
 		"parse": parse,
 		"parseString": parseString,
