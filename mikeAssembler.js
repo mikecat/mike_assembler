@@ -33,7 +33,7 @@ const mikeAssembler = (function() {
 	const outputFormats = {
 		"raw": {
 			"name": "raw",
-			"generateOutput": function(outputParts) {
+			"generateOutput": function(outputParts, outputConfig) {
 				return {
 					"output": JSON.stringify(outputParts, function(key, value) {
 						if ((typeof value) === "bigint") {
@@ -784,6 +784,18 @@ const mikeAssembler = (function() {
 		return res;
 	};
 
+	const apis = {
+		"isBigIntSupported": isBigIntSupported,
+		"toBigInt": toBigInt,
+		"fromBigInt": fromBigInt,
+		"registerTarget": registerTarget,
+		"registerOutputFormat": registerOutputFormat,
+		"tokenize": tokenize,
+		"parse": parse,
+		"parseString": parseString,
+		"evaluate": evaluate
+	};
+
 	const assemble = function(source, outputConfig) {
 		const lines = source.replace(/\r\n/g, "\n").replace(/\r/g, "\n").replace(/\n+$/, "").split("\n");
 		let pos = toBigInt(0);
@@ -830,7 +842,7 @@ const mikeAssembler = (function() {
 					if (lineParsed.inst !== null) {
 						let res = builtins(pos, lineParsed.inst, lineParsed.ops, context);
 						if (res === null && context.target !== null) {
-							res = context.target.assembleLine(pos, lineParsed.inst, lineParsed.ops, context);
+							res = context.target.assembleLine(pos, lineParsed.inst, lineParsed.ops, context, apis);
 						}
 						if (res === null) {
 							throw "undefined instruction: " + lineParsed.inst;
@@ -858,7 +870,7 @@ const mikeAssembler = (function() {
 				}
 			}
 		}
-		const output = outputFormats[outputConfig.outputFormat].generateOutput(outputParts);
+		const output = outputFormats[outputConfig.outputFormat].generateOutput(outputParts, outputConfig, apis);
 
 		return {
 			"output": output.output,
@@ -866,18 +878,8 @@ const mikeAssembler = (function() {
 		};
 	};
 
-	return {
-		"isBigIntSupported": isBigIntSupported,
-		"toBigInt": toBigInt,
-		"fromBigInt": fromBigInt,
-		"registerTarget": registerTarget,
-		"registerOutputFormat": registerOutputFormat,
-		"tokenize": tokenize,
-		"parse": parse,
-		"parseString": parseString,
-		"evaluate": evaluate,
-		"assemble": assemble
-	};
+	apis.assemble = assemble;
+	return apis;
 })();
 
 if ((typeof window) !== "undefined") {
