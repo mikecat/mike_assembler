@@ -520,11 +520,13 @@ const mikeAssembler = (function() {
 	const builtins = function(pos, inst, ops, context) {
 		const instLower = inst.toLowerCase();
 		if (instLower === "org") {
-			if (ops.length !== 1) throw "org takes exactly 1 argument";
+			if (ops.length !== 1 && ops.length !== 2) throw "org takes 1 or 2 argument";
 			const nextPos = evaluate(parse(tokenize(ops[0])), context.vars);
-			if (nextPos < 0) throw "invalid position";
+			const nextLabelPos = ops.length === 2 ? evaluate(parse(tokenize(ops[1])), context.vars) : nextPos;
+			if (nextPos < 0 || nextLabelPos < 0) throw "invalid position";
+			context.posOffset = nextPos - nextLabelPos;
 			return {
-				"nextPos": nextPos,
+				"nextPos": nextLabelPos,
 				"data": [],
 				"wordSize": 1
 			};
@@ -753,6 +755,7 @@ const mikeAssembler = (function() {
 			context.pass = pass;
 			context.outStart = null;
 			context.endianness = "little";
+			context.posOffset = toBigInt(0);
 			context.vars = {};
 			context.defines = {};
 			if (pass === 1) {
@@ -794,7 +797,7 @@ const mikeAssembler = (function() {
 						outputParts.push({
 							"line": lineParsed.line,
 							"lineno": i + 1,
-							"pos": pos,
+							"pos": (lineParsed.inst === "org" ? res.nextPos : pos) + context.posOffset,
 							"data": wordsToData(res.data, res.wordSize, context.endianness),
 							"wordSize": res.wordSize
 						});
@@ -803,7 +806,7 @@ const mikeAssembler = (function() {
 						outputParts.push({
 							"line": lineParsed.line,
 							"lineno": i + 1,
-							"pos": pos,
+							"pos": pos + context.posOffset,
 							"data": [],
 							"wordSize": 1
 						});
