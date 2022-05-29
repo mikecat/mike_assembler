@@ -800,15 +800,17 @@ const mikeAssembler = (function() {
 			context.posOffset = toBigInt(0);
 			context.vars = {};
 			context.defines = {};
-			if (pass === 1) {
-				context.labels = {};
-				context.labelArray = [];
-			} else {
+			if (pass !== 1) {
 				const labels = context.labelArray;
 				for (let i = 0; i < labels.length; i++) {
 					context.vars[labels[i]] = context.labels[labels[i]];
 				}
+				context.labelsPrev = context.labels;
+			} else {
+				context.labelsPrev = {};
 			}
+			context.labels = {};
+			context.labelArray = [];
 			outputParts = [];
 			message = "";
 
@@ -816,11 +818,8 @@ const mikeAssembler = (function() {
 				try {
 					const lineParsed = parseLine(lines[i]);
 					if (lineParsed.label !== null) {
-						if (lineParsed.label in context.labels) {
-							if (pos !== context.labels[lineParsed.label]) {
-								throw "multiple definitions of " + lineParsed.label;
-							}
-						} else if (lineParsed.label in context.vars) {
+						if (lineParsed.label in context.labels ||
+						(!(lineParsed.label in context.labelsPrev) && (lineParsed.label in context.vars))) {
 							throw "multiple definitions of " + lineParsed.label;
 						} else {
 							context.vars[lineParsed.label] = pos;
