@@ -46,7 +46,7 @@ const oneByOneOutputFormat = (function() {
 					return maxWord < 1 ? 1 : maxWord;
 				})();
 				if (lineWordSize > 0 && sortedParts[i].data.length % lineWordSize != 0) {
-					message += "line " + sortedParts[i].lineno + ": data size (" + sortedParts[i].data.length + ") is not multiple of word size (" + lineWordSize + ")\n";
+					message += "line " + sortedParts[i].lineno + ": warning: data size (" + sortedParts[i].data.length + ") is not multiple of word size (" + lineWordSize + ")\n";
 				}
 				const bytePerWord = lineWordSize <= 0 ? 1 : lineWordSize;
 				for (let j = 0; j < sortedParts[i].data.length; j += bytePerWord * maxWordPerLine) {

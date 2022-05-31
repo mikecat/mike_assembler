@@ -869,6 +869,14 @@ const mikeAssembler = (function() {
 						if (res === null) {
 							throw "undefined instruction: " + lineParsed.inst;
 						}
+						if (("warning" in res) && res.warning !== null) {
+							message += "line " + (i + 1) + ": warning: " + res.warning + "\n";
+						}
+						if (("warnings" in res) && res.warnings !== null) {
+							for (let j = 0; j < res.warnings.length; j++) {
+								message += "line " + (i + 1) + ": warning: " + res.warnings[j] + "\n";
+							}
+						}
 						outputParts.push({
 							"line": lineParsed.line,
 							"lineno": i + 1,
@@ -919,7 +927,16 @@ const mikeAssembler = (function() {
 			}
 		}
 
-		const output = outputFormats[outputConfig.outputFormat].generateOutput(outputParts, outputConfig, apis);
+		let output;
+		try {
+			output = outputFormats[outputConfig.outputFormat].generateOutput(outputParts, outputConfig, apis);
+		} catch (e) {
+			output = {
+				"output": "",
+				"message": "error thrown from output formatter: " + e + "\n"
+			};
+			error = true;
+		}
 
 		return {
 			"output": output.output,
