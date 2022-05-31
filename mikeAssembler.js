@@ -576,6 +576,8 @@ const mikeAssembler = (function() {
 			if (ops.length !== 1) throw "passlimit takes exactly 1 argument";
 			const passLimit = evaluate(parse(tokenize(ops[0])), context.vars);
 			if (passLimit < 1) throw "invalid pass limit";
+			if (context.passLimitSet) throw "multiple passlimit";
+			context.passLimitSet = true;
 			if (context.pass === 1) context.passLimit = passLimit;
 			return {
 				"nextPos": pos,
@@ -824,6 +826,7 @@ const mikeAssembler = (function() {
 		for (let pass = 1; !error && pass <= context.passLimit; pass++) {
 			pos = toBigInt(0);
 			context.pass = pass;
+			context.passLimitSet = false;
 			context.target = null;
 			context.outStart = null;
 			context.endianness = "little";
