@@ -640,6 +640,9 @@ const mikeAssembler = (function() {
 			const tLower = ops[0].toLowerCase();
 			if (!(tLower in targets)) throw "unknown target: " + tLower;
 			context.target = targets[tLower];
+			if (!(context.target.name in context.targetData)) {
+				context.targetData[context.target.name] = {};
+			}
 			return {
 				"nextPos": pos,
 				"data": [],
@@ -818,9 +821,12 @@ const mikeAssembler = (function() {
 					context.vars[labels[i]] = context.labels[labels[i]];
 				}
 				context.labelsPrev = context.labels;
+				context.targetPrevData = context.targetData;
 			} else {
 				context.labelsPrev = {};
+				context.targetPrevData = {};
 			}
+			context.targetData = {};
 			context.labels = {};
 			context.labelArray = [];
 			outputParts = [];
