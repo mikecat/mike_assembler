@@ -887,7 +887,7 @@ const mikeAssembler = (function() {
 						});
 					};
 				} catch (e) {
-					message += "line " + (i + 1) + ": " + e + "\n";
+					message += "line " + (i + 1) + ": error: " + e + "\n";
 					error = true;
 				}
 			}
@@ -905,7 +905,7 @@ const mikeAssembler = (function() {
 		if (!converged) {
 			for (let i = 0; i < linesParsed.length; i++) {
 				if (linesParsed[i].label in unconvergedLabels) {
-					message += "line " + (i + 1) + ": label " + linesParsed[i].label + " didn't converge\n";
+					message += "line " + (i + 1) + ": error: label " + linesParsed[i].label + " didn't converge\n";
 				}
 			}
 			error = true;
@@ -913,8 +913,7 @@ const mikeAssembler = (function() {
 		for (let i = 0; i < outputParts.length; i++) {
 			for (let j = 0; j < outputParts[i].data.length; j++) {
 				if (outputParts[i].data[j] === null) {
-					message += "line " + outputParts[i].lineno + ": couldn't decide data\n";
-					error = true;
+					message += "line " + outputParts[i].lineno + ": warning: couldn't decide data\n";
 					break;
 				}
 			}
@@ -924,7 +923,8 @@ const mikeAssembler = (function() {
 
 		return {
 			"output": output.output,
-			"message": message + output.message
+			"message": message + output.message,
+			"error": error
 		};
 	};
 
