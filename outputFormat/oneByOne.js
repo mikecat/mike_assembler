@@ -1,7 +1,7 @@
 "use strict";
 
 const oneByOneOutputFormat = (function() {
-	const name = "obo";
+	const name = "one-by-one";
 	const generateOutput = function(outputParts, outputConfig, apis) {
 		let output = "";
 		let message = "";
