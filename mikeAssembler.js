@@ -565,7 +565,7 @@ const mikeAssembler = (function() {
 			if (ops.length !== 1) throw "outstart takes exactly 1 argument";
 			const startPos = evaluate(parse(tokenize(ops[0])), context.vars);
 			if (startPos < 0) throw "invalid position";
-			if (context.outStart !== null && context.outStart !== startPos) throw "multiple outstart";
+			if (context.outStart !== null) throw "multiple outstart";
 			context.outStart = startPos;
 			return {
 				"nextPos": pos,
