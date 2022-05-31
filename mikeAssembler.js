@@ -572,6 +572,16 @@ const mikeAssembler = (function() {
 				"data": [],
 				"wordSize": 1
 			};
+		} else if (instLower === "passlimit") {
+			if (ops.length !== 1) throw "passlimit takes exactly 1 argument";
+			const passLimit = evaluate(parse(tokenize(ops[0])), context.vars);
+			if (passLimit < 1) throw "invalid pass limit";
+			if (context.pass === 1) context.passLimit = passLimit;
+			return {
+				"nextPos": pos,
+				"data": [],
+				"wordSize": 1
+			};
 		} else if (instLower === "align") {
 			if (ops.length !== 1 && ops.length !== 2) throw "align takes 1 or 2 arguments";
 			const divisor = evaluate(parse(tokenize(ops[0])), context.vars);
@@ -801,12 +811,17 @@ const mikeAssembler = (function() {
 
 	const assemble = function(source, outputConfig) {
 		const lines = source.replace(/\r\n/g, "\n").replace(/\r/g, "\n").replace(/\n+$/, "").split("\n");
+		const linesParsed = [];
 		let pos = toBigInt(0);
-		const context = {};
+		const context = {
+			"passLimit": 100
+		};
 		let outputParts = [];
 		let message = "";
 		let error = false;
-		for (let pass = 1; !error && pass <= 2; pass++) {
+		let converged = false;
+		let unconvergedLabels = {};
+		for (let pass = 1; !error && pass <= context.passLimit; pass++) {
 			pos = toBigInt(0);
 			context.pass = pass;
 			context.target = null;
@@ -834,7 +849,8 @@ const mikeAssembler = (function() {
 
 			for (let i = 0; i < lines.length; i++) {
 				try {
-					const lineParsed = parseLine(lines[i]);
+					if (pass === 1) linesParsed.push(parseLine(lines[i]));
+					const lineParsed = linesParsed[i];
 					if (lineParsed.label !== null) {
 						if (lineParsed.label in context.labels ||
 						(!(lineParsed.label in context.labelsPrev) && (lineParsed.label in context.vars))) {
@@ -875,7 +891,35 @@ const mikeAssembler = (function() {
 					error = true;
 				}
 			}
+			converged = true;
+			unconvergedLabels = {};
+			for (let i = 0; i < context.labelArray.length; i++) {
+				const labelName = context.labelArray[i];
+				if (!(labelName in context.labelsPrev) || context.labelsPrev[labelName] !== context.labels[labelName]) {
+					converged = false;
+					unconvergedLabels[labelName] = true;
+				}
+			}
+			if (converged) break;
 		}
+		if (!converged) {
+			for (let i = 0; i < linesParsed.length; i++) {
+				if (linesParsed[i].label in unconvergedLabels) {
+					message += "line " + (i + 1) + ": label " + linesParsed[i].label + " didn't converge\n";
+				}
+			}
+			error = true;
+		}
+		for (let i = 0; i < outputParts.length; i++) {
+			for (let j = 0; j < outputParts[i].data.length; j++) {
+				if (outputParts[i].data[j] === null) {
+					message += "line " + outputParts[i].lineno + ": couldn't decide data\n";
+					error = true;
+					break;
+				}
+			}
+		}
+
 		const output = outputFormats[outputConfig.outputFormat].generateOutput(outputParts, outputConfig, apis);
 
 		return {
