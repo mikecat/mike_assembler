@@ -910,19 +910,21 @@ const mikeAssembler = (function() {
 			}
 			if (converged) break;
 		}
-		if (!converged) {
-			for (let i = 0; i < linesParsed.length; i++) {
-				if (linesParsed[i].label in unconvergedLabels) {
-					message += "line " + (i + 1) + ": error: label " + linesParsed[i].label + " didn't converge\n";
+		if (!error) {
+			if (!converged) {
+				for (let i = 0; i < linesParsed.length; i++) {
+					if (linesParsed[i].label in unconvergedLabels) {
+						message += "line " + (i + 1) + ": error: label " + linesParsed[i].label + " didn't converge\n";
+					}
 				}
+				error = true;
 			}
-			error = true;
-		}
-		for (let i = 0; i < outputParts.length; i++) {
-			for (let j = 0; j < outputParts[i].data.length; j++) {
-				if (outputParts[i].data[j] === null) {
-					message += "line " + outputParts[i].lineno + ": warning: couldn't decide data\n";
-					break;
+			for (let i = 0; i < outputParts.length; i++) {
+				for (let j = 0; j < outputParts[i].data.length; j++) {
+					if (outputParts[i].data[j] === null) {
+						message += "line " + outputParts[i].lineno + ": warning: couldn't decide data\n";
+						break;
+					}
 				}
 			}
 		}
