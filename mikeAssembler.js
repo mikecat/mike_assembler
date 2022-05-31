@@ -466,7 +466,9 @@ const mikeAssembler = (function() {
 		"!=": function(a, b) { return toBigInt(a !== b ? 1 : 0); }
 	};
 
-	const evaluate = function(ast, vars, throwOnUndefinedIdentifier = true, hook = null) {
+	const evaluate = function(ast, vars, throwOnUndefinedIdentifier, hook) {
+		if ((typeof throwOnUndefinedIdentifier) === "undefined") throwOnUndefinedIdentifier = true;
+		if ((typeof hook) === "undefined") hook = null;
 		const hooked = hook === null ? null : hook(ast, vars);
 		if (hooked !== null) return hooked;
 		if (ast.kind === "value") {
@@ -971,14 +973,22 @@ if ((typeof window) !== "undefined") {
 			defaultByteRadios[i].addEventListener("change", enableDefaultByteOtherValue);
 		}
 
+		const getRadioValue = function(radio) {
+			if((typeof radio.value) !== "undefined") return radio.value;
+			for (let i = 0; i < radio.length; i++) {
+				if (radio[i].checked) return radio[i].value;
+			}
+			return "";
+		};
+
 		assembleButton.addEventListener("click", function() {
 			const outputConfig = {
-				"outputFormat": settingForm.output_format.value,
-				"wordSize": settingForm.word_size.value,
-				"endianness": settingForm.endianness.value,
-				"defaultByte": settingForm.default_byte.value === "other" ? settingForm.default_byte_other_value.value : settingForm.default_byte.value,
-				"addressFormat": settingForm.address_format.value,
-				"dataFormat": settingForm.data_format.value
+				"outputFormat": getRadioValue(settingForm.output_format),
+				"wordSize": getRadioValue(settingForm.word_size),
+				"endianness": getRadioValue(settingForm.endianness),
+				"defaultByte": getRadioValue(settingForm.default_byte) === "other" ? settingForm.default_byte_other_value.value : getRadioValue(settingForm.default_byte),
+				"addressFormat": getRadioValue(settingForm.address_format),
+				"dataFormat": getRadioValue(settingForm.data_format)
 			};
 			const result = mikeAssembler.assemble(sourceArea.value, outputConfig);
 			outputArea.value = result.output;
