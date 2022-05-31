@@ -934,7 +934,7 @@ const mikeAssembler = (function() {
 
 		let output;
 		try {
-			output = outputFormats[outputConfig.outputFormat].generateOutput(outputParts, outputConfig, apis);
+			output = outputFormats[outputConfig.outputFormat].generateOutput(outputParts, outputConfig, context, apis);
 		} catch (e) {
 			output = {
 				"output": "",

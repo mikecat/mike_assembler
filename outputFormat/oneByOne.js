@@ -2,7 +2,7 @@
 
 const oneByOneOutputFormat = (function() {
 	const name = "one-by-one";
-	const generateOutput = function(outputParts, outputConfig, apis) {
+	const generateOutput = function(outputParts, outputConfig, context, apis) {
 		let output = "";
 		let message = "";
 		const sortedParts = [];
