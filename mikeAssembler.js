@@ -991,7 +991,7 @@ if ((typeof window) !== "undefined") {
 				"dataFormat": getRadioValue(settingForm.data_format)
 			};
 			const result = mikeAssembler.assemble(sourceArea.value, outputConfig);
-			outputArea.value = result.output;
+			outputArea.value = result.error ? "" : result.output;
 			messageArea.value = result.message;
 		});
 	});
