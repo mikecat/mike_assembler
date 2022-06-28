@@ -554,9 +554,9 @@ const mikeAssembler = (function() {
 		const instLower = inst.toLowerCase();
 		if (instLower === "org") {
 			if (ops.length !== 1 && ops.length !== 2) throw "org takes 1 or 2 argument";
-			const nextPos = evaluate(parse(tokenize(ops[0])), context.vars);
-			const nextLabelPos = ops.length === 2 ? evaluate(parse(tokenize(ops[1])), context.vars) : nextPos;
-			if (nextPos < 0 || nextLabelPos < 0) throw "invalid position";
+			const nextLabelPos = evaluate(parse(tokenize(ops[0])), context.vars);
+			const nextPos = ops.length === 2 ? evaluate(parse(tokenize(ops[1])), context.vars) : nextLabelPos;
+			if (nextLabelPos < 0 || nextPos < 0) throw "invalid position";
 			context.posOffset = nextPos - nextLabelPos;
 			return {
 				"nextPos": nextLabelPos,
