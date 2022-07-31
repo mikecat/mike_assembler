@@ -1,0 +1,18 @@
+table.basicTable {
+	border-collapse: collapse;
+}
+
+table.basicTable th {
+	border: 1px solid black;
+	padding: 0.2em;
+}
+
+table.basicTable td {
+	border: 1px solid black;
+	padding: 0.2em;
+	vertical-align: top;
+}
+
+td.oplist code:not(:first-child) {
+	margin-left: 0.7em;
+}

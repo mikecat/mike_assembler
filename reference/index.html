@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>MikeAssembler リファレンス - トップ</title>
+<link href="reference.css" rel="stylesheet">
+
+</head>
+<body>
+<h1>MikeAssembler リファレンス</h1>
+<h2>対応アーキテクチャ</h2>
+<p>アーキテクチャは、疑似命令 <code>target &lt;アーキテクチャ名&gt;</code> で設定できる。</p>
+<ul>
+<li>現時点では無し</li>
+</ul>
+
+<h2>疑似命令</h2>
+<p>疑似命令の大文字・小文字は区別しない。</p>
+
+<table class="basicTable">
+<tr><th>疑似命令</th><th>説明</th></tr>
+<tr><td><code>org &lt;ラベル位置&gt; [, &lt;配置位置&gt;]</td>
+<td>
+次に配置するデータの位置(アドレス)を設定する。<br>
+「ラベル位置」は、ラベルやアライメントに用いられる位置である。<br>
+「配置位置」は、出力データに記録する位置である。<br>
+配置位置を省略した場合、ラベル位置と同じになる。
+</td></tr>
+<tr><td><code>outstart &lt;出力開始位置&gt;</code></td>
+<td>
+一部の出力形式において、出力を開始する位置(配置位置)を設定する。<br>
+ソースコード中に複数回現れてはいけない。
+</td></tr>
+<tr><td><code>passlimit &lt;最大アセンブル回数&gt;</code></td>
+<td>
+アセンブルを繰り返す最大の回数を設定する。<br>
+最初の繰り返しで設定された値のみが採用される。<br>
+ソースコード中に複数回現れてはいけない。<br>
+アセンブルを複数回繰り返すことで、使われる位置より後に定義されるラベルを反映させる。<br>
+アセンブルの繰り返しは、以下の条件のいずれかを満たすと終了する。
+<ul>
+<li>全ラベルに対応する位置が変化しなくなる</li>
+<li>繰り返した回数がここで指定した回数に達する</li>
+<li>エラーを検出する</li>
+</ul>
+</td></tr>
+<tr><td><code>align &lt;割る数&gt; [, &lt;余り&gt;]</code></td>
+<td>
+データの出力位置を0バイト以上進め、出力位置(ラベル位置)を「割る数」で割った余りが「余り」になるようにする。<br>
+「余り」を省略した場合は、0とする。
+</td></tr>
+<tr><td><code>alignfill &lt;割る数&gt;, &lt;埋める値&gt; [, &lt;余り&gt;]</code></td>
+<td>
+「埋める値」のバイトを0個以上出力し、出力位置(ラベル位置)を「割る数」で割った余りが「余り」になるようにする。<br>
+「余り」を省略した場合は、0とする。
+</td></tr>
+<tr><td><code>space &lt;サイズ&gt;</code></td>
+<td>
+データの出力位置を「サイズ」バイト進める。(0バイト以上)<br>
+例えば、データを出力せずに変数の領域を確保できる。
+</td></tr>
+<tr><td><code>fill &lt;サイズ&gt;, &lt;埋める値&gt;</code></td>
+<td>
+「埋める値」のバイトを「サイズ」個出力する。
+</td></tr>
+<tr><td><code>fillto &lt;位置&gt;, &lt;埋める値&gt;</code></td>
+<td>
+データの出力位置(ラベル位置)が「位置」になるまで、「埋める値」のバイトを出力する。<br>
+「位置」は現在のデータの出力位置以上でなければならない。
+</td></tr>
+<tr><td><code>target &lt;アーキテクチャ名&gt;</code></td>
+<td>
+使用するアーキテクチャを設定する。<br>
+アーキテクチャ名の大文字・小文字は区別しない。
+</td></tr>
+<tr><td><code>endianness &lt;エンディアン名&gt;</code></td>
+<td>
+データ(命令を含む)を出力する際のエンディアンを指定する。<br>
+出力形式におけるエンディアン(表示上のエンディアン)には反映されない。<br>
+エンディアン名は以下のいずれかである。(大文字・小文字は区別しない)
+<ul>
+<li><code>little</code> : リトルエンディアン</li>
+<li><code>big</code> : ビッグエンディアン</li>
+</ul>
+</td></tr>
+<tr><td><code>define &lt;識別子&gt;, &lt;式&gt;</code></td>
+<td>
+「識別子」の値を「式」の計算結果とする。<br>
+「識別子」はこれまでに定義されていないものでなければならない。<br>
+(ラベルとして定義されていてもいけない)
+</td></tr>
+<tr><td><code>redefine &lt;識別子&gt;, &lt;式&gt;</code></td>
+<td>
+「識別子」の値を「式」の計算結果とする。<br>
+「識別子」はこれまでに定義されているものでなければならない。<br>
+(ラベルとしての定義は含まない)
+</td></tr>
+<tr><td>
+<code>data &lt;式&gt; [, &lt;式&gt; [, ...]]</code><br>
+<code>datan &lt;式&gt; [, &lt;式&gt; [, ...]]</code><br>
+<code>datab &lt;式&gt; [, &lt;式&gt; [, ...]]</code><br>
+<code>dataw &lt;式&gt; [, &lt;式&gt; [, ...]]</code><br>
+<code>datal &lt;式&gt; [, &lt;式&gt; [, ...]]</code><br>
+<code>dataq &lt;式&gt; [, &lt;式&gt; [, ...]]</code>
+</td>
+<td>
+「式」の値をそれぞれのサイズの生のデータとして出力する。<br>
+「式」を複数指定した場合、左から順に出力する。<br>
+「式」の値がそれぞれのサイズで表現できる範囲を超えた場合、エラーとなる。<br>
+文字列の出力も可能である。出力サイズはそれぞれのサイズに切り上げられ、足りない部分は0で埋められる。<br>
+出力するサイズは以下の通りである。
+<ul>
+<li><code>datan</code> : ニブル(4ビット) (ただしバイト単位で出力され、一部の出力形式の表示に反映される)</li>
+<li><code>data</code> / <code>datab</code> : 1バイト</li>
+<li><code>dataw</code> : 2バイト</li>
+<li><code>datal</code> : 4バイト</li>
+<li><code>dataq</code> : 8バイト</li>
+</ul>
+</td></tr>
+</table>
+
+<h2>式</h2>
+<p>ここでは標準の解釈を述べる。アーキテクチャによっては特殊な解釈をする場合がある。</p>
+
+<h3>整数リテラル</h3>
+<p>以下の形式の整数リテラルが使用可能である。大文字・小文字は区別しない。</p>
+<ul>
+<li><code>12345</code> : 10進数</li>
+<li><code>0x123abc</code> : 16進数</li>
+<li><code>0b10101</code> : 2進数</li>
+<li><code>0o12345</code> : 8進数</li>
+</ul>
+
+<h3>文字列</h3>
+<p>
+文字列は <code>""</code> で囲んで表現する。<br>
+UTF-8でエンコードされる。<br>
+文字列に対する演算は未定義のため、エラーとなる。<br>
+以下のエスケープシーケンスが使用可能である。
+</p>
+<ul>
+<li><code>\\</code> : <code>\</code></li>
+<li><code>\"</code> : <code>"</code></li>
+<li><code>\'</code> : <code>'</code></li>
+<li><code>\r</code> : CR (<code>\x0d</code>)</li>
+<li><code>\n</code> : LF (<code>\x0a</code>)</li>
+<li><code>\t</code> : タブ (<code>\x09</code>)</li>
+<li><code>\0</code> : ナル (<code>\x00</code>)</li>
+<li><code>\x&lt;16進数2桁&gt;</code> / <code>\X&lt;16進数2桁&gt;</code> : 指定した16進数のバイト</li>
+</ul>
+
+<h3>文字</h3>
+<p>
+文字(対応する文字コードの整数)は <code>''</code> で囲んで表現する。<br>
+文字列と同様のエスケープシーケンスが使用可能である。<br>
+複数文字や0文字の場合、エラーとなる。
+</p>
+
+<h3>識別子</h3>
+<p>整数リテラル・文字列・文字・演算子・空白以外のものは、識別子とみなす。<br>
+識別子の大文字・小文字は区別する。<br>
+識別子がラベルとして定義されている場合、対応する位置(ラベル位置)を表す整数となる。<br>
+識別子が<code>define</code>や<code>redefine</code>で定義されている場合、定義された値となる。
+</p>
+
+<h3>演算子</h3>
+<p>
+以下の演算子が使用可能である。<br>
+優先順位は、以下の表で上のものほど高い。<br>
+同じ優先順位の二項演算子は、左から右に評価する。
+</p>
+<table class="basicTable">
+<tr><th>項数</th><th>演算子</th><th>説明</th></tr>
+<tr><td>単項</td><td class="oplist"><code>()</code><code>[]</code><code>{}</code></td>
+<td>
+<code>()</code> は、優先度の低い演算子を先に計算するために用いる。<br>
+<code>[]</code> および <code>{}</code> の計算は未定義であり、使用するとエラーになる。
+</td></tr>
+<tr><td>二項</td>
+<td class="oplist"><code>()</code><code>[]</code><code>{}</code></td>
+<td>
+<code>A[B]</code> のような形で用いる。<br>
+計算は未定義であり、使用するとエラーになる。
+</td></tr>
+<tr><td>単項</td>
+<td class="oplist"><code>!</code><code>~</code><code>+</code><code>-</code></td>
+<td>
+<ul style="margin: 0;">
+<li><code>!</code> : オペランドが0以外なら0、0なら1とする。 (論理NOT)</li>
+<li><code>~</code> : ビットNOTを行う。</li>
+<li><code>+</code> : オペランドの値をそのまま返す。</li>
+<li><code>-</code> : 符号反転を行う。</li>
+</ul>
+</td></tr>
+<tr><td>二項</td>
+<td class="oplist"><code>*</code><code>/</code><code>%</code></td>
+<td>
+<ul style="margin: 0;">
+<li><code>*</code> : 積を計算する。</li>
+<li><code>/</code> : 商(整数)を計算する。</li>
+<li><code>%</code> : 剰余を計算する。</li>
+</ul>
+</td></tr>
+<tr><td>二項</td>
+<td class="oplist"><code>+</code><code>-</code></td>
+<td>
+<ul style="margin: 0;">
+<li><code>+</code> : 和を計算する。</li>
+<li><code>-</code> : 差を計算する。</li>
+</ul>
+</td></tr>
+<tr><td>二項</td>
+<td class="oplist"><code>&lt;&lt;</code><code>&gt;&gt;</code></td>
+<td>
+<ul style="margin: 0;">
+<li><code>&lt;&lt;</code> : 左ビットシフトを行う。</li>
+<li><code>&gt;&gt;</code> : 算術右ビットシフトを行う。</li>
+</ul>
+</td></tr>
+<tr><td>二項</td>
+<td class="oplist"><code>&</code></td>
+<td>
+ビットANDを行う。
+</td></tr>
+<tr><td>二項</td>
+<td class="oplist"><code>|</code><code>^</code></td>
+<td>
+<ul style="margin: 0;">
+<li><code>|</code> : ビットORを行う。</li>
+<li><code>^</code> : ビットXORを行う。</li>
+</ul>
+</td></tr>
+<tr><td>二項</td>
+<td class="oplist"><code>&lt;</code><code>&gt;</code><code>&lt;=</code><code>&gt;=</code></td>
+<td>
+オペランドの大小関係が以下の条件を満たせば1、満たさなければ0とする。
+<ul>
+<li><code>&lt;</code> : 左のオペランドが右のオペランド未満</li>
+<li><code>&gt;</code> : 左のオペランドが右のオペランド超</li>
+<li><code>&lt;=</code> : 左のオペランドが右のオペランド以下</li>
+<li><code>&gt;=</code> : 左のオペランドが右のオペランド以上</li>
+</ul>
+</td></tr>
+<tr><td>二項</td>
+<td class="oplist"><code>==</code><code>!=</code></td>
+<td>
+オペランドの関係が以下の条件を満たせば1、満たさなければ0とする。
+<ul>
+<li><code>==</code> : 左のオペランドと右のオペランドが等しい</li>
+<li><code>!=</code> : 左のオペランドと右のオペランドが等しくない</li>
+</ul>
+</td></tr>
+<tr><td>二項</td>
+<td class="oplist"><code>&amp;&amp;</code></td>
+<td>
+まず左のオペランドを評価する。<br>
+左のオペランドが0ならば、右のオペランドは評価せずに0とする。<br>
+左のオペランドが0以外ならば、右のオペランドを評価し、0以外なら1、0なら0とする。
+</td></tr>
+<tr><td>二項</td>
+<td class="oplist"><code>||</code></td>
+<td>
+まず左のオペランドを評価する。<br>
+左のオペランドが0以外ならば、右のオペランドは評価せずに1とする。<br>
+左のオペランドが0ならば、右のオペランドを評価し、0以外なら1、0なら0とする。
+</td></tr>
+<tr><td>三項</td>
+<td class="oplist"><code>?:</code></td>
+<td>
+<code>A ? B : C</code> の形で用いる。<br>
+まず<code>A</code>を評価する。<br>
+0以外なら<code>B</code>を、0なら<code>C</code>を評価し、その値とする。<br>
+<code>A</code>の評価結果が0以外の時<code>C</code>は評価せず、0の時<code>B</code>は評価しない。<br>
+<code>A ? B : C ? D : E</code> は <code>A ? B : (C ? D : E)</code> と解釈する。
+</td></tr>
+<tr><td>二項</td>
+<td class="oplist"><code>,</code></td>
+<td>
+計算は未定義であり、使用するとエラーになる。
+</td></tr>
+</table>
+
+<hr>
+<p><a href="../">戻る</a></p>
+</body>
+</html>
