@@ -5,6 +5,7 @@
 <title>MikeAssembler (Multiple Instruction Kindly Emitting Assembler)</title>
 <script src="mikeAssembler.js"></script>
 <script src="outputFormat/oneByOne.js"></script>
+<script src="outputFormat/ihex.js"></script>
 <style>
 <!--
 div.table_div {
@@ -59,7 +60,7 @@ input[type="radio"]:not(:first-child) {
 <input type="radio" name="output_format" value="raw" id="output_format_raw"><label for="output_format_raw">raw</label>
 <input type="radio" name="output_format" value="one-by-one" id="output_format_obo" checked="checked"><label for="output_format_obo">one-by-one</label>
 <input type="radio" disabled="disabled" name="output_format" value="dump" id="output_format_dump"><label for="output_format_dump">dump</label>
-<input type="radio" disabled="disabled" name="output_format" value="ihex" id="output_format_ihex"><label for="output_format_ihex">ihex</label>
+<input type="radio" name="output_format" value="ihex" id="output_format_ihex"><label for="output_format_ihex">ihex</label>
 <input type="radio" disabled="disabled" name="output_format" value="base64" id="output_format_base64"><label for="output_format_base64">base64</label>
 </td></tr>
 <tr><td id="output_settings_word_size">word size</td><td>
