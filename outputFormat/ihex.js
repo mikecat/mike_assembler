@@ -2,7 +2,8 @@
 
 const ihexFormat = (function() {
 	const name = "ihex";
-	const generateOutput = function(outputParts, outputConfig, context, apis) {
+	const generateOutput = function(outputParts, outputConfig, context) {
+		const apis = context.apis;
 		let output = "";
 		let message = "";
 		const sortedParts = [];

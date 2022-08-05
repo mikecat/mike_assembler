@@ -834,6 +834,7 @@ const mikeAssembler = (function() {
 		const linesParsed = [];
 		let pos = toBigInt(0);
 		const context = {
+			"apis": apis,
 			"passLimit": 100
 		};
 		let outputParts = [];
@@ -952,7 +953,7 @@ const mikeAssembler = (function() {
 
 		let output;
 		try {
-			output = outputFormats[outputConfig.outputFormat].generateOutput(outputParts, outputConfig, context, apis);
+			output = outputFormats[outputConfig.outputFormat].generateOutput(outputParts, outputConfig, context);
 		} catch (e) {
 			output = {
 				"output": "",
