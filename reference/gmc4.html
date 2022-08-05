@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>MikeAssembler リファレンス - GMC-4</title>
+<link href="reference.css" rel="stylesheet">
+</head>
+<body>
+<h1>MikeAssembler リファレンス - GMC-4</h1>
+<h2>アーキテクチャ名</h2>
+<p><code>gmc4</code></p>
+
+<h2>概要</h2>
+
+<p>GMC-4は、大人の科学 Vol.24の付録の4ビットマイコンである。</p>
+<p><a href="https://ja.wikipedia.org/wiki/GMC-4">GMC-4 - Wikipedia</a></p>
+
+<p>以下で(もととなった製品の)PC用シミュレータが公開されている。</p>
+<p><a href="https://www.vector.co.jp/soft/win95/util/se289783.html">FX-マイコン シミュレータの詳細情報 : Vector ソフトを探す！</a></p>
+
+<p>また、(上位)互換機が発売されている。</p>
+<p><a href="http://www.picosoft.co.jp/ORANGE-4/index.html">ORANGE-4</a></p>
+
+<h2>入出力</h2>
+
+<p>GMC-4は、以下の出力装置を持つ。</p>
+<ul>
+<li>7個の横一列に並んだLED (2進LED)</li>
+<li>1個の7セグメントLED</li>
+<li>音声再生用スピーカー</li>
+</ul>
+
+<p>また、GMC-4は、入力用に0～Fの16個のキーを用いることができる。<br>
+(他にも操作用のキーがあるが、プログラムからは扱えない)</p>
+
+<h2>レジスタ</h2>
+
+<p>GMC-4は、1ビットの実行フラグと、以下の8個の4ビットレジスタを持つ。<br>
+各レジスタのデータは、以下のアドレスに格納されている。</p>
+
+<table class="basicTable">
+<tr><th>レジスタ</th><th>アドレス</th></tr>
+<tr><td>A</td><td>0x6F</td></tr>
+<tr><td>B</td><td>0x6C</td></tr>
+<tr><td>Y</td><td>0x6E</td></tr>
+<tr><td>Z</td><td>0x6D</td></tr>
+<tr><td>A'</td><td>0x69</td></tr>
+<tr><td>B'</td><td>0x67</td></tr>
+<tr><td>Y'</td><td>0x68</td></tr>
+<tr><td>Z'</td><td>0x66</td></tr>
+</table>
+
+<h2>命令セット</h2>
+
+<p>
+MikeAssemblerでは、以下の命令をサポートしている。<br>
+命令および<code>CAL</code>命令に続く種類名の大文字・小文字は区別しない。
+</p><p>
+<code>imm4</code>は、4ビットの即値である。<br>
+<code>addr</code>は、8ビットのアドレス(非負の即値)である。<br>
+動作において、実行フラグを<code>F</code>、次に実行する命令のアドレスを<code>PC</code>で表す。<br>
+また、<code>[x]</code>は番地<code>x</code>のデータメモリを表す。
+</p>
+
+<table class="basicTable">
+<tr><th>命令</th><th>命令コード</th><th>動作</th><th>説明</th></th>
+<tr><td><code>KA</code></td><td><code>0</code></td>
+<td><code>F, A ← KEY(A)</code></td>
+<td>キーの状態をチェックする。<br>
+キーが押されていれば、押されているキーの番号をレジスタAに格納し、実行フラグを0にする。<br>
+キーが押されていなければ、レジスタAの値は変更せず、実行フラグを1にする。</td></tr>
+<tr><td><code>AO</code></td><td><code>1</code></td>
+<td><code>7SEG ← A<br>F ← 1</code></td>
+<td>レジスタAの値を7セグメントLEDに出力する。<br>実行フラグを1にする。</td></tr>
+<tr><td><code>CH</code></td><td><code>2</code></td>
+<td><code>A, B ← B, A<br>Y, Z ← Z, Y<br>F ← 1</code></td>
+<td>AレジスタとBレジスタの値、YレジスタとZレジスタの値をそれぞれ入れ替える。<br>
+実行フラグを1にする。</td></tr>
+<tr><td><code>CY</code></td><td><code>3</code></td>
+<td><code>A, Y ← Y, A<br>F ← 1</td>
+<td>AレジスタとYレジスタの値を入れ替える。<br>実行フラグを1にする。</td></tr>
+<tr><td><code>AM</code></td><td><code>4</code></td>
+<td><code>[Y] ← A<br>F ← 1</code></td>
+<td>Aレジスタの値をYレジスタで指定する位置のデータメモリにストアする。<br>
+実行フラグを1にする。</td></tr>
+<tr><td><code>MA</code></td><td><code>5</code></td>
+<td><code>A ← [Y]<br>F ← 1</code></td>
+<td>Yレジスタで指定する位置のデータメモリからAレジスタに値をロードする。<br>
+実行フラグを1にする。</td></tr>
+<tr><td><code>M+</code></td><td><code>6</code></td>
+<td><code>F ← A + [Y] &gt; 0xF<br>A ← A + [Y]</code></td>
+<td>AレジスタにYレジスタで指定する位置のデータメモリの値を加算する。<br>
+実行フラグは、キャリーがある場合は1、ない場合は0となる。</td></tr>
+<tr><td><code>M-</code></td><td><code>7</code></td>
+<td><code>F ← [Y] &lt; A<br>A ← [Y] - A</code></td>
+<td>Yレジスタで指定する位置のデータメモリの値からAレジスタの値を引き、結果をAレジスタに格納する。<br>
+実行フラグは、結果が負の場合は1、非負の場合は0となる。</td></tr>
+<tr><td><code>TIA imm4</code></td><td><code>8 &lt;imm4&gt;</code></td>
+<td><code>A ← imm4<br>F ← 1</code></td>
+<td>Aレジスタに即値を格納する。<br>実行フラグを1にする。</td></tr>
+<tr><td><code>AIA imm4</code></td><td><code>9 &lt;imm4&gt;</code></td>
+<td><code>F ← A + imm4 &gt; 0xF<br>A ← A + imm4</code></td>
+<td>Aレジスタに即値を加算する。<br>
+実行フラグは、キャリーがある場合は1、ない場合は0となる。</td></tr>
+<tr><td><code>TIY imm4</code></td><td><code>A &lt;imm4&gt;</code></td>
+<td><code>Y ← imm4<br>F ← 1</code></td>
+<td>Yレジスタに即値を格納する。<br>実行フラグを1にする。</td></tr>
+<tr><td><code>AIY imm4</code></td><td><code>B &lt;imm4&gt;</code></td>
+<td><code>F ← Y + imm4 &gt; 0xF<br>Y ← Y + imm4</code></td>
+<td>Yレジスタに即値を加算する。<br>
+実行フラグは、キャリーがある場合は1、ない場合は0となる。</td></tr>
+<tr><td><code>CIA imm4</code></td><td><code>C &lt;imm4&gt;</code></td>
+<td><code>F ← A != imm4</code></td>
+<td>Aレジスタの値と即値を比較する。<br>
+実行フラグは、等しい場合は0、等しくない場合は1となる。</td></tr>
+<tr><td><code>CIY imm4</code></td><td><code>D &lt;imm4&gt;</code></td>
+<td><code>F ← Y != imm4</code></td>
+<td>Yレジスタの値と即値を比較する。<br>
+実行フラグは、等しい場合は0、等しくない場合は1となる。</td></tr>
+<tr><td><code>CAL name</code></td><td><code>E &lt;x&gt;</code></td><td>後述</td>
+<td>比較的複雑な処理(サブルーチン)を実行する。</td></tr>
+<tr><td><code>JUMP addr</code></td><td><code>F &lt;addr上位&gt; &lt;addr下位&gt;</code></td>
+<td><code>if (F) PC ← addr<br>F ← 1</code></td>
+<td>実行フラグが1の場合、指定した場所に実行を移す。<br>実行フラグが0の場合、そのまま次の命令に進む。<br>
+実行フラグを1にする。</td></tr>
+</table>
+
+<h3><code>CAL</code>命令</h3>
+
+<p>実行フラグが1のときは、下記の動作を行い、<code>CAL SIFT</code>以外は実行フラグを1にする。<br>
+実行フラグが0のときは、下記の動作は行わず、実行フラグを1にする。</p>
+
+<table class="basicTable">
+<tr><th>命令</th><th>命令コード</th><th>動作</th></tr>
+<tr><td><code>CAL RSTO</code></td><td><code>E 0</code></td>
+<td>7セグメントLEDを全て消灯する。</td></tr>
+<tr><td><code>CAL SETR</code></td><td><code>E 1</code></td>
+<td>2進LEDのうち、Yレジスタで指定する位置(0～6)のものを点灯する。</td></tr>
+<tr><td><code>CAL RSTR</code></td><td><code>E 2</code></td>
+<td>2進LEDのうち、Yレジスタで指定する位置(0～6)のものを消灯する。</td></tr>
+<tr><td><code>CAL CMPL</code></td><td><code>E 4</code></td>
+<td>Aレジスタの値をビット反転(NOT演算)し、結果をAレジスタに格納する。</td></tr>
+<tr><td><code>CAL CHNG</code></td><td><code>E 5</code></td>
+<td>AとA'、BとB'、YとY'、ZとZ'レジスタの値をそれぞれ入れ替える。</td></tr>
+<tr><td><code>CAL SIFT</code></td><td><code>E 6</code></td>
+<td>Aレジスタの値を1ビット論理右シフトし、結果をAレジスタに格納する。<br>
+実行フラグは、もとのAレジスタの最下位ビットが0の場合は1、最下位ビットが1の場合は0となる。</td></tr>
+<tr><td><code>CAL ENDS</code></td><td><code>E 7</code></td>
+<td>エンド音を再生する。※1</td></tr>
+<tr><td><code>CAL ERRS</code></td><td><code>E 8</code></td>
+<td>エラー音を再生する。※1</td></tr>
+<tr><td><code>CAL SHTS</code></td><td><code>E 9</code></td>
+<td>短いブザー音を再生する。※1</td></tr>
+<tr><td><code>CAL LONS</code></td><td><code>E A</code></td>
+<td>長いブザー音を再生する。※1</td></tr>
+<tr><td><code>CAL SUND</code></td><td><code>E B</code></td>
+<td>Aレジスタで指定した高さ(1～0xE)のブザー音を再生する。※1<br>
+Aレジスタの値が0または0xFの場合は、何も再生しない。</td></tr>
+<tr><td><code>CAL TIMR</code></td><td><code>E C</code></td>
+<td>(Aレジスタの値+1)×0.1秒の間実行を停止する。</td></tr>
+<tr><td><code>CAL DSPR</code></td><td><code>E D</code></td>
+<td>データメモリ<code>[0xE]</code>の値を2進LEDの下位4ビットに、<code>[0xF]</code>の値の下位3ビットを2進LEDの上位3ビットに出力する。</td></tr>
+<tr><td><code>CAL DEM-</code></td><td><code>E E</code></td>
+<td>Yレジスタで指定する位置のデータメモリからAレジスタの値を10進演算で減算する。<br>
+そして、Yレジスタの値から1を減算する。<br>
+詳しくは後述。</td></tr>
+<tr><td><code>CAL DEM+</code></td><td><code>E F</code></td>
+<td>Yレジスタで指定する位置のデータメモリにAレジスタの値を10進演算で加算する。<br>
+そして、Yレジスタの値から1を減算する。<br>
+詳しくは後述。</td></tr>
+</table>
+
+<h4>※1 音声再生命令について</h4>
+
+<p>
+音声の再生中は、2進LEDの3番目(0-origin、真ん中のLED)が点灯し、実行が停止する。<br>
+<code>CAL SUND</code>においてAレジスタの値が0または0xFの場合は、何も再生しないので、すぐに次の命令の実行に移る。
+</p>
+
+<h4><code>CAL DEM-</code> 命令の動作</h4>
+
+<p>
+実験の結果、<code>CAL DEM-</code>命令の動作は以下の擬似コードで表せるようである。
+</p>
+
+<code><pre>if [Y] &lt; A
+  // ボローが発生する場合
+  [Y] ←  [Y] - A - 6
+  [Y - 1] ← 1
+else
+  // ボローが発生しない場合
+  [Y] ← [Y] - A
+endif
+Y ← Y - 1</pre></code>
+
+<h4><code>CAL DEM+</code> 命令の動作</h4>
+
+<p>
+実験の結果、<code>CAL DEM+</code>命令の動作は以下の擬似コードで表せるようである。<br>
+ただし、「足す数」「足す位置」は動作の記述用の4ビットの変数である。
+</p>
+
+<code><pre>足す数 ← A
+足す位置 ← Y
+while 足す数 &gt; 0
+  if [足す位置] + 足す数 > 9
+    // 10進で繰り上がる場合
+    [足す位置] ← [足す位置] + 足す数 + 6
+    足す数 ← 1
+    足す位置 ← 足す位置 - 1
+  else
+    // 繰り上がらない場合
+    [足す位置] ← [足す位置] + 足す数
+    足す数 ← 0
+  endif
+endwhile
+Y ← Y - 1
+</pre></code>
+
+<h2>互換機能</h2>
+
+<p>
+<code>DEFAULTHEX</code> 疑似命令を用いると、それ以降に登場するプリフィックス(<code>0x</code>、<code>0b</code>、<code>0o</code>)がついていない数値を16進数として扱う。<br>
+これにより、a～fのアルファベットからなる文字列も(識別子ではなく)16進数値として扱われる。
+</p>
+
+<h2>サンプルコード</h2>
+
+<p>
+7セグメントLEDに0～Fの数字を順に繰り返し表示する。
+</p>
+
+<code><pre>target gmc4
+
+    tia 0
+    tiy 4
+loop1:
+    ao
+    aia 1
+    cy
+    cal timr
+    cy
+    jump loop1</pre></code>
+
+<hr>
+<p><a href="./">戻る</a></p>
+</body>
+</html>
