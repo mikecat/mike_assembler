@@ -550,6 +550,20 @@ const mikeAssembler = (function() {
 		throw "undefined operation";
 	};
 
+	const fitsInBitsSigned = function(value, nBits) {
+		if (nBits <= 0) return false;
+		const minValue = -toBigInt(1) << toBigInt(nBits - 1);
+		const maxValue = (toBigInt(1) << toBigInt(nBits - 1)) - toBigInt(1);
+		return minValue <= value && value <= maxValue;
+	};
+
+	const fitsInBitsUnsigned = function(value, nBits) {
+		if (nBits <= 0) return false;
+		const minValue = toBigInt(0);
+		const maxValue = (toBigInt(1) << toBigInt(nBits)) - toBigInt(1);
+		return minValue <= value && value <= maxValue;
+	};
+
 	const builtins = function(pos, inst, ops, context) {
 		const instLower = inst.toLowerCase();
 		if (instLower === "org") {
@@ -810,7 +824,9 @@ const mikeAssembler = (function() {
 		"tokenize": tokenize,
 		"parse": parse,
 		"parseString": parseString,
-		"evaluate": evaluate
+		"evaluate": evaluate,
+		"fitsInBitsSigned": fitsInBitsSigned,
+		"fitsInBitsUnsigned": fitsInBitsUnsigned
 	};
 
 	const assemble = function(source, outputConfig) {
