@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>MikeAssembler リファレンス - ORANGE-4</title>
+<link href="reference.css" rel="stylesheet">
+</head>
+<body>
+<h1>MikeAssembler リファレンス - ORANGE-4</h1>
+<h2>アーキテクチャ名</h2>
+<p><code>orange4</code></p>
+
+<h2>概要</h2>
+<p>
+ORANGE-4は、ピコソフト株式会社の4ビットマイコンで、GMC-4と互換性がある。
+</p>
+<p><a href="http://www.picosoft.co.jp/ORANGE-4/index.html">ORANGE-4</a></p>
+
+<h2>命令セット</h2>
+<p>
+MikeAssemblerでは、以下の命令に対応している。<br>
+命令の大文字・小文字は区別しない。<br>
+各命令の詳細は、ORANGE-4のWebページやマニュアルを参照すること。
+</p><p>
+<code>imm4</code>は、4ビットの即値である。<br>
+<code>funcno</code>は、4ビットの機能番号(非負の即値)である。<br>
+<code>addr</code>は、8ビットのアドレス(非負の即値)である。
+</p>
+
+<table class="basicTable">
+<tr><th>命令</th><th>命令コード</th></tr>
+<tr><td><code>ink</code></td><td><code>0</code></td></tr>
+<tr><td><code>outn</code></td><td><code>1</code></td></tr>
+<tr><td><code>abyz</code></td><td><code>2</code></td></tr>
+<tr><td><code>ay</code></td><td><code>3</code></td></tr>
+<tr><td><code>st</code></td><td><code>4</code></td></tr>
+<tr><td><code>ld</code></td><td><code>5</code></td></tr>
+<tr><td><code>add</code></td><td><code>6</code></td></tr>
+<tr><td><code>sub</code></td><td><code>7</code></td></tr>
+<tr><td><code>ldi imm4</code></td><td><code>8 &lt;imm4&gt;</code></td></tr>
+<tr><td><code>addi imm4</code></td><td><code>9 &lt;imm4&gt;</code></td></tr>
+<tr><td><code>ldyi imm4</code></td><td><code>A &lt;imm4&gt;</code></td></tr>
+<tr><td><code>addyi imm4</code></td><td><code>B &lt;imm4&gt;</code></td></tr>
+<tr><td><code>cpi imm4</code></td><td><code>C &lt;imm4&gt;</code></td></tr>
+<tr><td><code>cpyi imm4</code></td><td><code>D &lt;imm4&gt;</code></td></tr>
+<tr><td><code>scall funcno</code></td><td><code>E &lt;funcno&gt;</code></td></tr>
+<tr><td><code>jmpf addr</code></td><td><code>F &lt;addr上位&gt; &lt;addr下位&gt;</code></td></tr>
+<tr><td><code>call addr</code></td><td><code>F 6 0 &lt;addr上位&gt; &lt;addr下位&gt;</code></td></tr>
+<tr><td><code>ret</code></td><td><code>F 6 1</code></td></tr>
+<tr><td><code>pusha</code></td><td><code>F 6 2</code></td></tr>
+<tr><td><code>popa</code></td><td><code>F 6 3</code></td></tr>
+<tr><td><code>pushb</code></td><td><code>F 6 4</code></td></tr>
+<tr><td><code>popb</code></td><td><code>F 6 5</code></td></tr>
+<tr><td><code>pushy</code></td><td><code>F 6 6</code></td></tr>
+<tr><td><code>popy</code></td><td><code>F 6 7</code></td></tr>
+<tr><td><code>pushz</code></td><td><code>F 6 8</code></td></tr>
+<tr><td><code>popz</code></td><td><code>F 6 9</code></td></tr>
+<tr><td><code>ioctrl</code></td><td><code>F 7 0</code></td></tr>
+<tr><td><code>out</code></td><td><code>F 7 1</code></td></tr>
+<tr><td><code>in</code></td><td><code>F 7 2</code></td></tr>
+<tr><td><code>dn imm4</code></td><td><code>&lt;imm4&gt;</code></td></tr>
+</table>
+
+<h2>出力のORANGE-4形式への変換</h2>
+<p>
+MikeAssemblerでは、ORANGE-4のモニター用の形式での出力には対応していない。<br>
+そこで、<a href="https://gchq.github.io/CyberChef/">CyberChef</a>を用いて、ihex形式の出力をORANGE-4用の形式に変換するRecipeを用意した。<br>
+ihex形式の出力をInput欄に貼り付けることで、Output欄にORANGE-4用のデータが出力される。<br>
+</p>
+<p><a href="https://gchq.github.io/CyberChef/#recipe=Find_/_Replace(%7B'option':'Regex','string':':.%7B6%7D(%5B%5E0%5D.%7C.%5B%5E0%5D).*(%5C%5Cn%7C$)'%7D,'',true,false,false,false)Find_/_Replace(%7B'option':'Regex','string':':.%7B4%7D(..)00(.*)..$'%7D,'E$1:%5C%5Cn$2',true,false,true,false)Fork('%5C%5Cn','%5C%5Cn',false)Conditional_Jump(':',false,'skip',10)Find_/_Replace(%7B'option':'Regex','string':'.(.)'%7D,'$1',true,false,true,false)Label('skip')Merge(true)Find_/_Replace(%7B'option':'Extended%20(%5C%5Cn,%20%5C%5Ct,%20%5C%5Cx...)','string':':%5C%5Cn'%7D,':',true,false,true,false)">Find / Replace, 7 more - CyberChef</a></p>
+<p>※入力した内容はURLに反映され、ブラウザの履歴に残ることがあるので、注意すること。</p>
+
+<hr>
+<p><a href="./">戻る</a></p>
+</body>
+</html>
