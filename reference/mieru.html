@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>MikeAssembler リファレンス - MIPS</title>
+<link href="reference.css" rel="stylesheet">
+<style>
+.instCategory {
+	text-align: center;
+}
+.bitDisplay {
+	position: relative;
+}
+.bitDisplay span:first-child {
+	position: absolute;
+	left: 0;
+	margin-left: 0.2em;
+}
+.bitDisplay span:last-child {
+	position: absolute;
+	right: 0;
+	margin-right: 0.2em;
+}
+.instDisplay td {
+	text-align: center;
+}
+</style>
+</head>
+<body>
+<h1>MikeAssembler リファレンス - MIPS</h1>
+<h2>アーキテクチャ名</h2>
+<p><code>mieru</code></p>
+
+<h2>概要</h2>
+<p>
+アーキテクチャ名の由来は <a href="https://www.arch.cs.titech.ac.jp/lecture/emb/">MieruEMB Project</a> で使われていることから。
+</p><p>
+一般的な製品では、PIC32MXシリーズのマイコンなどで使用されている。
+</p>
+
+<h2>レジスタ</h2>
+
+<p>
+以下の32個の32ビットレジスタ (汎用レジスタ) が計算用に使用できる。<br>
+MikeAssemblerでは、名前・番号のいずれでも指定できる。 (頭に<code>$</code>が必要である)
+</p>
+
+<table class="basicTable">
+<tr><th>名前</th><th>番号</th><th>用途</th><th>要保存</th></tr>
+<tr><td><code>$zero</code></td><td><code>$0</code></td>
+<td>ゼロ固定</td><td>-</td></tr>
+<tr><td><code>$at</code></td><td><code>$1</code></td>
+<td>アセンブラ用に予約</td><td>No</td></tr>
+<tr><td><code>$v0</code>, <code>$v1</code></td><td><code>$2</code>, <code>$3</code></td>
+<td>関数の戻り値・式の評価結果</td><td>No</td></tr>
+<tr><td><code>$a0</code>～<code>$a3</code></td><td><code>$4</code>～<code>$7</code></td>
+<td>関数の引数</td><td>No</td></tr>
+<tr><td><code>$t0</code>～<code>$t7</code></td><td><code>$8</code>～<code>$15</code></td>
+<td>一時データ</td><td>No</td></tr>
+<tr><td><code>$s0</code>～<code>$s7</code></td><td><code>$16</code>～<code>$23</code></td>
+<td>保存される一時データ</td><td>Yes</td></tr>
+<tr><td><code>$t8</code>, <code>$t9</code></td><td><code>$24</code>, <code>$25</code></td>
+<td>一時データ</td><td>No</td></tr>
+<tr><td><code>$k0</code>, <code>$k1</code></td><td><code>$26</code>, <code>$27</code></td>
+<td>OSカーネル用に予約</td><td>No</td></tr>
+<tr><td><code>$gp</code></td><td><code>$28</code></td>
+<td>グローバルポインタ</td><td>Yes</td></tr>
+<tr><td><code>$sp</code></td><td><code>$29</code></td>
+<td>スタックポインタ</td><td>Yes</code></td></tr>
+<tr><td><code>$fp</code></td><td><code>$30</code></td>
+<td>フレームポインタ</td><td>Yes</td></tr>
+<tr><td><code>$ra</code></td><td><code>$31</code></td>
+<td>リターンアドレス</td><td>(Yes)</td></tr>
+</table>
+<p>
+※要保存：関数の処理で値を変えた後、関数から戻る時には呼び出された時の値に戻さないといけない。
+</p>
+
+<p>
+さらに、以下の32ビットレジスタが存在する。
+</p>
+<ul>
+<li><code>Hi</code>, <code>Lo</code> : 乗算や除算の結果を格納する。</li>
+<li><code>PC</code> : 実行する命令の位置を格納する。</li>
+</ul>
+
+<h3><code>$at</code>レジスタの使用可否設定</h3>
+<p>
+<code>$at</code>レジスタは疑似命令の処理で使用され、使い方を誤るとデータの破損に繋がる可能性がある。<br>
+MikeAssemblerでは、<code>at_usage</code> ディレクティブを用いて<code>$at</code>レジスタ (番号指定の <code>$1</code> を含む) の使用可否を設定できる。
+</p>
+
+<table class="basicTable">
+<tr><th>ディレクティブ</th><th>設定</th></tr>
+<tr><td><code>at_usage allow</code></td><td><code>$at</code>レジスタの明示的な使用を許可 (警告なし)</td></tr>
+<tr><td><code>at_usage warn</code></td><td><code>$at</code>レジスタの明示的な使用を許可 (警告あり)</td></tr>
+<tr><td><code>at_usage error</code></td><td><code>$at</code>レジスタの明示的な使用を禁止 (エラー)</td></tr>
+</table>
+
+<p>
+<code>at_usage</code> は何度でも使用可能であり、書いた位置以降に設定が反映される。<br>
+デフォルトは <code>warn</code> (警告ありで許可) である。<br>
+大文字・小文字は区別しない。
+</p>
+
+<h2>命令セット</h2>
+
+<p>
+MikeAssemblerでは、以下の命令をサポートしている。<br>
+命令およびレジスタ名の大文字・小文字は区別しない。
+</p><p>
+<code>$rs</code>, <code>$rt</code>, <code>$rd</code> : 汎用レジスタ<br>
+<code>imms</code> : 符号付き16ビット整数<br>
+<code>immz</code> : 符号なし16ビット整数<br>
+<code>imm16</code> : 16ビット整数 (符号付き・符号なしどちらも可)<br>
+<code>imm32</code> : 32ビット整数 (符号付き・符号なしどちらも可)<br>
+<code>shamt</code> : 符号なし5ビット整数<br>
+<code>addr</code> : 飛び先のアドレス (符号なし32ビット整数)<br>
+<code>c0reg</code> : 符号なし5ビット整数 (<code>$</code>をつけてもよい)<br>
+<code>sel</code> : 符号なし3ビット整数<br>
+<code>code10</code> : 例外ハンドラに渡す情報 (符号なし10ビット整数)<br>
+<code>code20</code> : 例外ハンドラに渡す情報 (符号なし20ビット整数)
+</p>
+
+<table class="basicTable">
+<tr><td class="instCategory" colspan="5">レジスタ演算命令 (乗除算以外)</td></tr>
+<tr><th>命令</th><th>動作</th><th>形式</th><th>opcode</th><th>その他</th></tr>
+<tr><td><code>add $rd, $rs, $rt</code></td>
+<td><code>$rd = $rs + $rt</code><br>オーバーフロー時は例外を発生させる。</td>
+<td>R</td><td>0x00</td><td>shamt = 0x00, funct = 0x20</td></tr>
+<tr><td><code>addu $rd, $rs, $rt</code></td>
+<td><code>$rd = $rs + $rt</code></td>
+<td>R</td><td>0x00</td><td>shamt = 0x00, funct = 0x21</td></tr>
+<tr><td><code>sub $rd, $rs, $rt</code></td>
+<td><code>$rd = $rs - $rt</code><br>オーバーフロー時は例外を発生させる。</td>
+<td>R</td><td>0x00</td><td>shamt = 0x00, funct = 0x22</td></tr>
+<tr><td><code>subu $rd, $rs, $rt</code></td>
+<td><code>$rd = $rs - $rt</code></td>
+<td>R</td><td>0x00</td><td>shamt = 0x00, funct = 0x23</td></tr>
+<tr><td><code>and $rd, $rs, $rt</code></td>
+<td><code>$rd = $rs &amp; $rt</code></td>
+<td>R</td><td>0x00</td><td>shamt = 0x00, funct = 0x24</td></tr>
+<tr><td><code>or $rd, $rs, $rt</code></td>
+<td><code>$rd = $rs | $rt</code></td>
+<td>R</td><td>0x00</td><td>shamt = 0x00, funct = 0x25</td></tr>
+<tr><td><code>xor $rd, $rs, $rt</code></td>
+<td><code>$rd = $rs ^ $rt</code></td>
+<td>R</td><td>0x00</td><td>shamt = 0x00, funct = 0x26</td></tr>
+<tr><td><code>nor $rd, $rs, $rt</code></td>
+<td><code>$rd = ~($rs | $rt)</code></td>
+<td>R</td><td>0x00</td><td>shamt = 0x00, funct = 0x27</td></tr>
+<tr><td><code>sllv $rd, $rt, $rs</code></td>
+<td><code>$rd = $rt &lt;&lt; ($rs &amp; 0x1f)</code></td>
+<td>R</td><td>0x00</td><td>shamt = 0x00, funct = 0x04</td></tr>
+<tr><td><code>srlv $rd, $rt, $rs</code></td>
+<td><code>$rd = $rt &gt;&gt;&gt; ($rs &amp; 0x1f)</code> (論理シフト)</td>
+<td>R</td><td>0x00</td><td>shamt = 0x00, funct = 0x06</td></tr>
+<tr><td><code>srav $rd, $rt, $rs</code></td>
+<td><code>$rd = $rt &gt;&gt; ($rs &amp; 0x1f)</code> (算術シフト)</td>
+<td>R</td><td>0x00</td><td>shamt = 0x00, funct = 0x07</td></tr>
+<tr><td><code>slt $rd, $rs, $rt</code></td>
+<td><code>$rd = $rs &lt; $rt</code> (符号付き整数として比較)<br>真なら1、偽なら0を格納する。</td>
+<td>R</td><td>0x00</td><td>shamt = 0x00, funct = 0x2a</td></tr>
+<tr><td><code>sltu $rd, $rs, $rt</code></td>
+<td><code>$rd = $rs &lt; $rt</code> (符号なし整数として比較)<br>真なら1、偽なら0を格納する。</td>
+<td>R</td><td>0x00</td><td>shamt = 0x00, funct = 0x2b</td></tr>
+
+<tr><td class="instCategory" colspan="5">乗除算命令</td></tr>
+<tr><th>命令</th><th>動作</th><th>形式</th><th>opcode</th><th>その他</th></tr>
+<tr><td><code>mult $rd, $rs, $rt</code></td>
+<td><code>Hi:Lo = $rs * $rt</code> (符号付き整数として乗算)<br><code>$rd = Lo</code></td>
+<td>R</td><td>0x00</td><td>shamt = 0x00, funct = 0x18</td></tr>
+<tr><td><code>mult $rs, $rt</code></td>
+<td><code>Hi:Lo = $rs * $rt</code> (符号付き整数として乗算)</td>
+<td>R</td><td>0x00</td><td>rd = 0x00, shamt = 0x00, funct = 0x18</td></tr>
+<tr><td><code>multu $rd, $rs, $rt</code></td>
+<td><code>Hi:Lo = $rs * $rt</code> (符号なし整数として乗算)<br><code>$rd = Lo</code></td>
+<td>R</td><td>0x00</td><td>shamt = 0x00, funct = 0x19</td></tr>
+<tr><td><code>multu $rs, $rt</code></td>
+<td><code>Hi:Lo = $rs * $rt</code> (符号なし整数として乗算)</td>
+<td>R</td><td>0x00</td><td>rd = 0x00, shamt = 0x00, funct = 0x19</td></tr>
+<tr><td><code>div $rs, $rt</code></td>
+<td><code>Lo = $rs / $rt<br>Hi = $rs % $rt</code> (符号付き整数として除算)</td>
+<td>R</td><td>0x00</td><td>rd = 0x00, shamt = 0x00, funct = 0x1a</td></tr>
+<tr><td><code>divu $rs, $rt</code></td>
+<td><code>Lo = $rs / $rt<br>Hi = $rs % $rt</code> (符号なし整数として除算)</td>
+<td>R</td><td>0x00</td><td>rd = 0x00, shamt = 0x00, funct = 0x1b</td></tr>
+<tr><td><code>mfhi $rd</code></td>
+<td><code>$rd = Hi</code></td>
+<td>R</td><td>0x00</td><td>rs = 0x00, rt = 0x00, shamt = 0x00, funct = 0x10</td></tr>
+<tr><td><code>mflo $rd</code></td>
+<td><code>$rd = Lo</code></td>
+<td>R</td><td>0x00</td><td>rs = 0x00, rt = 0x00, shamt = 0x00, funct = 0x12</td></tr>
+
+<tr><td class="instCategory" colspan="5">即値演算命令</td></tr>
+<tr><th>命令</th><th>動作</th><th>形式</th><th>opcode</th><th>その他</th></tr>
+<tr><td><code>lui $rt, imm16</code></td>
+<td><code>$rt = imm16 &lt;&lt; 16</code><br></td>
+<td>I</td><td>0x0f</td><td>rs = 0x00, immediate = imm16</td></tr>
+<tr><td><code>addi $rt, $rs, imms</code></td>
+<td><code>$rt = $rs + imms</code><br>オーバーフロー時は例外を発生させる。</td>
+<td>I</td><td>0x08</td><td>immediate = imms</td></tr>
+<tr><td><code>addiu $rt, $rs, imms</code></td>
+<td><code>$rt = $rs + imms</code></td>
+<td>I</td><td>0x09</td><td>immediate = imms</td></tr>
+<tr><td><code>andi $rt, $rs, immz</code></td>
+<td><code>$rt = $rs &amp; immz</code></td>
+<td>I</td><td>0x0c</td><td>immediate = immz</td></tr>
+<tr><td><code>ori $rt, $rs, immz</code></td>
+<td><code>$rt = $rs | immz</code></td>
+<td>I</td><td>0x0d</td><td>immediate = immz</td></tr>
+<tr><td><code>xori $rt, $rs, immz</code></td>
+<td><code>$rt = $rs ^ immz</code></td>
+<td>I</td><td>0x0e</td><td>immediate = immz</td></tr>
+<tr><td><code>sll $rd, $rt, shamt</code></td>
+<td><code>$rd = $rt &lt;&lt; shamt</code></td>
+<td>R</td><td>0x00</td><td>rs = 0x00, funct = 0x00</td></tr>
+<tr><td><code>srl $rd, $rt, shamt</code></td>
+<td><code>$rd = $rt &gt;&gt;&gt; shamt</code> (論理シフト)</td>
+<td>R</td><td>0x00</td><td>rs = 0x00, funct = 0x02</td></tr>
+<tr><td><code>sra $rd, $rt, shamt</code></td>
+<td><code>$rd = $rt &gt;&gt; shamt</code> (算術シフト)</td>
+<td>R</td><td>0x00</td><td>rs = 0x00, funct = 0x03</td></tr>
+<tr><td><code>slti $rt, $rs, imms</code></td>
+<td><code>$rt = $rs &lt; imms</code> (符号付き整数として比較)<br>真なら1、偽なら0を格納する。</td>
+<td>I</td><td>0x0a</td><td>immediate = imms</td></tr>
+<tr><td><code>sltiu $rt, $rs, imms</code></td>
+<td><code>$rt = $rs &lt; imms</code> (符号なし整数として比較)<br>
+即値を<strong>符号拡張</strong>した結果を、符号なし整数として比較する。<br>
+真なら1、偽なら0を格納する。</td>
+<td>I</td><td>0x0b</td><td>immediate = imms</td></tr>
+
+<tr><td class="instCategory" colspan="5">分岐命令</td></tr>
+<tr><th>命令</th><th>動作</th><th>形式</th><th>opcode</th><th>その他</th></tr>
+<tr><td><code>beq $rs, $rt, addr</code></td>
+<td><code>if ($rs == $rt) PC = addr</code></td>
+<td>I</td><td>0x04</td><td>addr = PC + 4 + (immediate &lt;&lt; 2)</td></tr>
+<tr><td><code>bne $rs, $rt, addr</code></td>
+<td><code>if ($rs != $rt) PC = addr</code></td>
+<td>I</td><td>0x05</td><td>addr = PC + 4 + (immediate &lt;&lt; 2)</td></tr>
+<tr><td><code>j addr</code></td><td><code>PC = addr</code></td>
+<td>J</td><td>0x02</td><td>addr = ((PC + 4) &amp; 0xf0000000) | (immediate &lt;&lt; 2)</td></tr>
+<tr><td><code>jal addr</code></td><td><code>$31 = PC + 8<br>PC = addr</code></td>
+<td>J</td><td>0x03</td><td>addr = ((PC + 4) &amp; 0xf0000000) | (immediate &lt;&lt; 2)</td></tr>
+<tr><td><code>jr $rs</code></td>
+<td><code>PC = $rs</td>
+<td>R</td><td>0x00</td><td>rt = 0x00, rd = 0x00, shamt = 0x00, funct = 0x08</td></tr>
+<tr><td><code>jalr $rs</code></td>
+<td><code>$31 = PC + 8<br>PC = $rs</td>
+<td>R</td><td>0x00</td><td>rt = 0x00, rd = 0x1f, shamt = 0x00, funct = 0x09</td></tr>
+<tr><td><code>jalr $rd, $rs</code></td>
+<td><code>$rd = PC + 8<br>PC = $rs</td>
+<td>R</td><td>0x00</td><td>rt = 0x00, shamt = 0x00, funct = 0x09</td></tr>
+
+<tr><td class="instCategory" colspan="5">メモリアクセス命令</td></tr>
+<tr><th>命令</th><th>動作</th><th>形式</th><th>opcode</th><th>その他</th></tr>
+<tr><td><code>lb $rt, ($rs)</code></td>
+<td><code>$rt = *(int8_t*)$rs</code></td>
+<td>I</td><td>0x20</td><td>immediate = 0x0000</td></tr>
+<tr><td><code>lb $rt, imms($rs)</code></td>
+<td><code>$rt = *(int8_t*)($rs + imms)</code></td>
+<td>I</td><td>0x20</td><td>immediate = imms</td></tr>
+<tr><td><code>lbu $rt, ($rs)</code></td>
+<td><code>$rt = *(uint8_t*)$rs</code></td>
+<td>I</td><td>0x24</td><td>immediate = 0x0000</td></tr>
+<tr><td><code>lbu $rt, imms($rs)</code></td>
+<td><code>$rt = *(uint8_t*)($rs + imms)</code></td>
+<td>I</td><td>0x24</td><td>immediate = imms</td></tr>
+<tr><td><code>lh $rt, ($rs)</code></td>
+<td><code>$rt = *(int16_t*)$rs</code></td>
+<td>I</td><td>0x21</td><td>immediate = 0x0000</td></tr>
+<tr><td><code>lh $rt, imms($rs)</code></td>
+<td><code>$rt = *(int16_t*)($rs + imms)</code></td>
+<td>I</td><td>0x21</td><td>immediate = imms</td></tr>
+<tr><td><code>lhu $rt, ($rs)</code></td>
+<td><code>$rt = *(uint16_t*)$rs</code></td>
+<td>I</td><td>0x25</td><td>immediate = 0x0000</td></tr>
+<tr><td><code>lhu $rt, imms($rs)</code></td>
+<td><code>$rt = *(uint16_t*)($rs + imms)</code></td>
+<td>I</td><td>0x25</td><td>immediate = imms</td></tr>
+<tr><td><code>lw $rt, ($rs)</code></td>
+<td><code>$rt = *(uint32_t*)$rs</code></td>
+<td>I</td><td>0x23</td><td>immediate = 0x0000</td></tr>
+<tr><td><code>lw $rt, imms($rs)</code></td>
+<td><code>$rt = *(uint32_t*)($rs + imms)</code></td>
+<td>I</td><td>0x23</td><td>immediate = imms</td></tr>
+<tr><td><code>sb $rt, ($rs)</code></td>
+<td><code>*(uint8_t*)$rs = $rt</code></td>
+<td>I</td><td>0x28</td><td>immediate = 0x0000</td></tr>
+<tr><td><code>sb $rt, imms($rs)</code></td>
+<td><code>*(uint8_t*)($rs + imms) = $rt</code></td>
+<td>I</td><td>0x28</td><td>immediate = imms</td></tr>
+<tr><td><code>sh $rt, ($rs)</code></td>
+<td><code>*(uint16_t*)$rs = $rt</code></td>
+<td>I</td><td>0x29</td><td>immediate = 0x0000</td></tr>
+<tr><td><code>sh $rt, imms($rs)</code></td>
+<td><code>*(uint16_t*)($rs + imms) = $rt</code></td>
+<td>I</td><td>0x29</td><td>immediate = imms</td></tr>
+<tr><td><code>sw $rt, ($rs)</code></td>
+<td><code>*(uint32_t*)$rs = $rt</code></td>
+<td>I</td><td>0x2b</td><td>immediate = 0x0000</td></tr>
+<tr><td><code>sw $rt, imms($rs)</code></td>
+<td><code>*(uint32_t*)($rs + imms) = $rt</code></td>
+<td>I</td><td>0x2b</td><td>immediate = imms</td></tr>
+
+<tr><td class="instCategory" colspan="5">システム命令</td></tr>
+<tr><th>命令</th><th>動作</th><th>形式</th><th>opcode</th><th>その他</th></tr>
+<tr><td><code>mfc0 $rt, c0reg</code></td>
+<td><code>$rt = CP0[c0reg][0]</code></td>
+<td>C</td><td>0x10</td><td>funct = 0x00, shamt = 0x00, sel = 0x0</td></tr>
+<tr><td><code>mfc0 $rt, c0reg, sel</code></td>
+<td><code>$rt = CP0[c0reg][sel]</code></td>
+<td>C</td><td>0x10</td><td>funct = 0x00, shamt = 0x00</td></tr>
+<tr><td><code>mtc0 $rt, c0reg</code></td>
+<td><code>CP0[c0reg][0] = $rt</code></td>
+<td>C</td><td>0x10</td><td>funct = 0x04, shamt = 0x00, sel = 0x0</td></tr>
+<tr><td><code>mtc0 $rt, c0reg, sel</code></td>
+<td><code>CP0[c0reg][sel] = $rt</code></td>
+<td>C</td><td>0x10</td><td>funct = 0x04, shamt = 0x00</td></tr>
+<tr><td><code>ei</code></td><td>割り込みを許可する (StatusレジスタのIEビットを1にする)</td>
+<td>-</td><td>-</td><td>0x41606020</td></tr>
+<tr><td><code>ei $rt</code></td>
+<td>変更前のStatusレジスタの値を<code>$rt</code>に格納する<br>割り込みを許可する (StatusレジスタのIEビットを1にする)</td>
+<td>R</td><td>0x10</td><td>rs = 0x0b, rd = 0x0c, shamt = 0x00, funct = 0x20</td></tr>
+<tr><td><code>di</code></td><td>割り込みを禁止する (StatusレジスタのIEビットを0にする)</td>
+<td>-</td><td>-</td><td>0x41606000</td></tr>
+<tr><td><code>di $rt</code></td>
+<td>変更前のStatusレジスタの値を<code>$rt</code>に格納する<br>割り込みを禁止する (StatusレジスタのIEビットを0にする)</td>
+<td>R</td><td>0x10</td><td>rs = 0x0b, rd = 0x0c, shamt = 0x00, funct = 0x00</td></tr>
+<tr><td><code>ehb</code></td><td>実行ハザードバリア</td>
+<td>-</td><td>-</td><td>0x000000c0</td></tr>
+<tr><td><code>eret</code></td><td>割込や例外の処理から復帰する</td>
+<td>-</td><td>-</td><td>0x42000018</td></tr>
+<tr><td><code>break</code></td><td>ブレークポイント例外を発生させる</td>
+<td>E</td><td>0x00</td><td>code = 0x00000, funct = 0x0d</td></tr>
+<tr><td><code>break code10</code></td><td>ブレークポイント例外を発生させる</td>
+<td>E</td><td>0x00</td><td>code = code10 &lt;&lt; 10, funct = 0x0d</td></tr>
+<tr><td><code>syscall</code></td><td>システムコール例外を発生させる</td>
+<td>E</td><td>0x00</td><td>code = 0x00000, funct = 0x0c</td></tr>
+<tr><td><code>syscall code20</code></td><td>システムコール例外を発生させる</td>
+<td>E</td><td>0x00</td><td>code = code20, funct = 0x0c</td></tr>
+
+<tr><td class="instCategory" colspan="5">疑似命令</td></tr>
+<tr><th>命令</th><th>動作</th><th colspan="3">展開する命令</th></tr>
+<tr><td><code>nop</code></td><td>何もしない</td>
+<td colspan="3"><code>sll $0, $0, 0</code></td></tr>
+<tr><td><code>move $rd, $rs</code></td><td><code>$rd = $rs</code></td>
+<td colspan="3"><code>addi $rd, $rs, 0</code></td></tr>
+<tr><td><code>li $rd, imm32</code></td><td><code>$rd = imm32</code></td>
+<td colspan="3"><code>lui $rd, imm32 &gt;&gt; 16<br>ori $rd, $rd, imm32 &amp; 0xffff</code></td></tr>
+<tr><td><code>la $rd, addr</code></td><td><code>$rd = addr</code></td>
+<td colspan="3"><code>lui $rd, addr &gt;&gt; 16<br>ori $rd, $rd, addr &amp; 0xffff</code></td></tr>
+<tr><td><code>blt $rs, $rt, addr</code></td><td><code>if ($rs &lt; $rt) PC = addr</code></td>
+<td colspan="3"><code>slt $1, $rs, $rt<br>bne $1, $0, addr</code></td></tr>
+<tr><td><code>bgt $rs, $rt, addr</code></td><td><code>if ($rs &gt; $rt) PC = addr</code></td>
+<td colspan="3"><code>slt $1, $rt, $rs<br>bne $1, $0, addr</code></td></tr>
+<tr><td><code>ble $rs, $rt, addr</code></td><td><code>if ($rs &lt;= $rt) PC = addr</code></td>
+<td colspan="3"><code>slt $1, $rt, $rs<br>beq $1, $0, addr</code></td></tr>
+<tr><td><code>bge $rs, $rt, addr</code></td><td><code>if ($rs &gt;= $rt) PC = addr</code></td>
+<td colspan="3"><code>slt $1, $rs, $rt<br>beq $1, $0, addr</code></td></tr>
+
+</table>
+
+<h3>命令の形式</h3>
+
+<table class="basicTable">
+<tr><th>形式名</th><th colspan="7">命令の形式</th></tr>
+<tr><td>&nbsp;</td>
+<!-- 幅をビット数に比例させる -->
+<td class="bitDisplay" style="width: 9em;"><span>31</span><span>26</span></td>
+<td class="bitDisplay" style="width: 7.5em;"><span>25</span><span>21</span></td>
+<td class="bitDisplay" style="width: 7.5em;"><span>20</span><span>16</span></td>
+<td class="bitDisplay" style="width: 7.5em;"><span>15</span><span>11</span></td>
+<td class="bitDisplay" style="width: 7.5em;"><span>10</span><span>6</span></td>
+<td class="bitDisplay" style="width: 4.5em;"><span>5</span><span>3</span></td>
+<td class="bitDisplay" style="width: 4.5em;"><span>2</span><span>0</span></td>
+</tr><tr>
+<tr class="instDisplay"><td>R</td><td>opcode</td><td>rs</td><td>rt</td><td>rd</td><td>shamt</td><td colspan="2">funct</td></tr>
+<tr class="instDisplay"><td>I</td><td>opcode</td><td>rs</td><td>rt</td><td colspan="4">immediate</td></tr>
+<tr class="instDisplay"><td>J</td><td>opcode</td><td colspan="6">immediate</td></tr>
+<tr class="instDisplay"><td>C</td><td>opcode</td><td>funct</td><td>rt</td><td>c0reg</td><td colspan="2">shamt</td><td>sel</td></tr>
+<tr class="instDisplay"><td>E</td><td>opcode</td><td colspan="4">code</td><td colspan="2">funct</td></tr>
+</table>
+
+<h2>データの出典</h2>
+<ul>
+<li><a href="https://ja.wikipedia.org/wiki/MIPS%E3%82%A2%E3%83%BC%E3%82%AD%E3%83%86%E3%82%AF%E3%83%81%E3%83%A3">MIPSアーキテクチャ - Wikipedia</a></li>
+<li><a href="https://www.cs.uregina.ca/Links/class-info/201/SPIM-IO/MIPSrefCard.pdf">MIPS/SPIM Reference Card</a></li>
+<li><a href="http://www.cburch.com/cs/330/reading/mips-ref.pdf">MIPS reference card</a></li>
+<li><a href="https://toshiba.semicon-storage.com/info/docget.jsp?did=10488">32 ビット TX System RISC TX19A ファミリー アーキテクチャ編</a></li>
+<li><a href="https://gcc.godbolt.org/">Compiler Explorer</a></li>
+</ul>
+
+<hr>
+<p><a href="./">戻る</a></p>
+</body>
+</html>
