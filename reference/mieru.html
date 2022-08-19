@@ -345,7 +345,7 @@ MikeAssemblerでは、以下の命令をサポートしている。<br>
 <tr><td><code>nop</code></td><td>何もしない</td>
 <td colspan="3"><code>sll $0, $0, 0</code></td></tr>
 <tr><td><code>move $rd, $rs</code></td><td><code>$rd = $rs</code></td>
-<td colspan="3"><code>addi $rd, $rs, 0</code></td></tr>
+<td colspan="3"><code>sll $rd, $rs, 0</code></td></tr>
 <tr><td><code>li $rd, imm32</code></td><td><code>$rd = imm32</code></td>
 <td colspan="3"><code>lui $rd, imm32 &gt;&gt; 16<br>ori $rd, $rd, imm32 &amp; 0xffff</code></td></tr>
 <tr><td><code>la $rd, addr</code></td><td><code>$rd = addr</code></td>
