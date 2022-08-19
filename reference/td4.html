@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>MikeAssembler リファレンス - TD4</title>
+<link href="reference.css" rel="stylesheet">
+</head>
+<body>
+<h1>MikeAssembler リファレンス - TD4</h1>
+<h2>アーキテクチャ名</h2>
+<p><code>td4</code></p>
+
+<h2>概要</h2>
+<p>TD4は、書籍「CPUの創りかた」で題材となっているCPUである。</p>
+
+<ul>
+<li><a href="https://book.mynavi.jp/ec/products/detail/id=22065">CPUの創りかた | マイナビブックス</a></li>
+<li><a href="https://www.amazon.co.jp/CPU%E3%81%AE%E5%89%B5%E3%82%8A%E3%81%8B%E3%81%9F-%E6%B8%A1%E6%B3%A2-%E9%83%81/dp/4839909865">CPUの創りかた | 渡波 郁 |本 | 通販 | Amazon</a></li>
+</ul>
+
+<h2>入出力</h2>
+<p>TD4は、4ビットの入力ポート1個と、4ビットの出力ポート1個を持つ。</p>
+
+<h2>レジスタ</h2>
+<p>TD4は、以下のレジスタを持つ。</p>
+<ul>
+<li>PC : プログラムカウンタ (4ビット)</li>
+<li>A : 汎用 (4ビット)</li>
+<li>B : 汎用 (4ビット)</li>
+<li>C : フラグ (1ビット)</li>
+</ul>
+
+<h2>命令セット</h2>
+<p>
+MikeAssemblerでは、以下の命令をサポートしている。<br>
+命令およびレジスタ名の大文字・小文字は区別しない。
+</p><p>
+<code>Im</code>は、4ビットの即値である。<br>
+通常の式による表現に加え、<code>0101</code>のように0/1を4個並べた2進数での表現が可能である。<br>
+即値は、機械語の<code>mmmm</code>の部分に反映される。
+</p>
+
+<table class="basicTable">
+<tr><th>命令</th><th>機械語 (ビット列)</th><th>動作</th><th>実行後のC (フラグ)</th></tr>
+<tr><td><code>ADD A, Im</code></td><td><code>0000 mmmm</code></td><td><code>A ← A + Im</code></td><td>キャリー</td></tr>
+<tr><td><code>ADD B, Im</code></td><td><code>0101 mmmm</code></td><td><code>B ← B + Im</code></td><td>キャリー</td></tr>
+<tr><td><code>MOV A, Im</code></td><td><code>0011 mmmm</code></td><td><code>A ← Im</code></td><td>0</td></tr>
+<tr><td><code>MOV B, Im</code></td><td><code>0111 mmmm</code></td><td><code>B ← Im</code></td><td>0</td></tr>
+<tr><td><code>MOV A, B</code></td><td><code>0001 0000</code></td><td><code>A ← B</code></td><td>0</td></tr>
+<tr><td><code>MOV B, A</code></td><td><code>0100 0000</code></td><td><code>B ← A</code></td><td>0</td></tr>
+<tr><td><code>IN A</code></td><td><code>0010 0000</code></td><td><code>A ← 入力ポート</code></td><td>0</td></tr>
+<tr><td><code>IN B</code></td><td><code>0110 0000</code></td><td><code>B ← 入力ポート</code></td><td>0</td></tr>
+<tr><td><code>OUT Im</code></td><td><code>1011 mmmm</code></td><td><code>出力ポート ← Im</code></td><td>0</td></tr>
+<tr><td><code>OUT B</code></td><td><code>1001 0000</code></td><td><code>出力ポート ← B</code></td><td>0</td></tr>
+<tr><td><code>JMP Im</code></td><td><code>1111 mmmm</code></td><td><code>PC ← Im</code></td><td>0</td></tr>
+<tr><td><code>JNC Im</code></td><td><code>1110 mmmm</code></td><td><code>if (C == 0) PC ← Im</code></td><td>0</td></tr>
+</table>
+
+<p>
+<code>JNC</code>命令は必ず加算命令(<code>ADD</code>)の直後に実行しなければならないとされているが、MikeAssemblerではチェックを行わない。
+</p><p>
+なお、レジスタ<code>A</code>の値を出力ポートに出力する命令は、TD4では定義されていない。
+</p><p>
+<code>MOV</code>命令の第2オペランドにおける<code>a</code>、<code>A</code>、<code>b</code>、<code>B</code>、<br>
+および<code>OUT</code>命令の第1オペランドにおける<code>b</code>、<code>B</code>は、レジスタとして扱われる。<br>
+これらの場所でこれらを識別子として用いたい場合は、<code>+b</code>などのようにすると良い。
+</p>
+
+<h2>関連リンク</h2>
+
+<ul>
+<li><a href="http://xyama.sakura.ne.jp/hp/4bitCPU_TD4.html">CPUの創りかた TD4</a></li>
+<li><a href="https://webnucky.blog.fc2.com/blog-entry-308.html">Web Nucky Blog |CPUの創りかた TD4 を作る（基板組立、部品）</a></li>
+<li><a href="https://umtkm.github.io/td4/?rom=b701e101e3b601e601e8b0b401eab8ff">TD4 Emulator Web</a></li>
+</ul>
+
+<hr>
+<p><a href="./">戻る</a></p>
+</body>
+</html>
