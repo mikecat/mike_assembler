@@ -61,8 +61,8 @@ MikeAssemblerでは、以下の命令をサポートしている。<br>
 </p><p>
 なお、レジスタ<code>A</code>の値を出力ポートに出力する命令は、TD4では定義されていない。
 </p><p>
-<code>MOV</code>命令の第2オペランドにおける<code>a</code>、<code>A</code>、<code>b</code>、<code>B</code>、<br>
-および<code>OUT</code>命令の第1オペランドにおける<code>b</code>、<code>B</code>は、レジスタとして扱われる。<br>
+<code>MOV</code>命令の第2オペランド、および<code>OUT</code>命令の第1オペランドにおける<code>a</code>、<code>A</code>、<code>b</code>、<code>B</code>は、レジスタとして扱われる。<br>
+(<code>OUT A</code> 命令は定義されていないため、エラーになる)<br>
 これらの場所でこれらを識別子として用いたい場合は、<code>+b</code>などのようにすると良い。
 </p>
 
