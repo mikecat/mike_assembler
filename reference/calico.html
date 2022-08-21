@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>MikeAssembler リファレンス - CalicoCPU</title>
+<link href="reference.css" rel="stylesheet">
+</head>
+<body>
+<h1>MikeAssembler リファレンス - CalicoCPU</h1>
+<h2>アーキテクチャ名</h2>
+<p><code>calico</code></p>
+
+<h2>概要</h2>
+<p>
+CalicoCPUは「Calculator IC organized CPU」の略である。<br>
+「74シリーズのロジックICで作る、ある程度本格的な計算ができるCPU」を目指した設計。
+</p>
+<p><a href="https://github.com/mikecat/hardware_cpu/tree/main/cpus/calico_cpu">hardware_cpu/cpus/calico_cpu at main · mikecat/hardware_cpu · GitHub</a></p>
+
+<h2>入出力</h2>
+<p>
+CalicoCPUは、8ビットの入出力ポートを2個持つ。<br>
+各ビットごとに、出力(HIGH/LOW)か入力(Hi-Z)かを選択できる。<br>
+ポートからの入力は、バッファなどの影響で遅れることがある。(実装依存)
+</p>
+
+<h2>レジスタ</h2>
+<p>
+CalicoCPUは、以下のレジスタを持つ。
+</p>
+<ul>
+<li><code>A</code>、<code>B</code>、<code>C</code>、<code>D</code> : 汎用レジスタ (8ビット×4)</li>
+<li><code>PC</code> : プログラムカウンタ (8ビット)</li>
+<li><code>P0OUT</code>、<code>P1OUT</code> : ポート出力値レジスタ (8ビット×2)</li>
+<li><code>P0DRIVE</code>、<code>P1DRIVE</code> : ポート出力モードレジスタ (8ビット×2)</li>
+</ul>
+
+<h2>命令セット</h2>
+<p>
+MikeAssemblerでは、以下の命令をサポートしている。<br>
+命令およびレジスタ名の大文字・小文字は区別しない。
+</p><p>
+<code>rd</code>、<code>rs</code>、<code>rt</code> : 汎用レジスタ (<code>A</code> or <code>B</code> or <code>C</code> or <code>D</code>)<br>
+<code>width<code> : シフト幅 (0以上8以下の整数)<br>
+<code>imm</code> : 即値 (整数、許される範囲は命令による)<br>
+<code>preg</code> : ポート用レジスタ・ポート入力
+</p><p>
+汎用レジスタは、2ビットで以下のように表す。
+</p>
+<table class="basicTable">
+<tr><th>レジスタ</th><th>ビット</th></tr>
+<tr><td><code>A</code></td><td><code>00</td></tr>
+<tr><td><code>B</code></td><td><code>01</td></tr>
+<tr><td><code>C</code></td><td><code>10</td></tr>
+<tr><td><code>D</code></td><td><code>11</td></tr>
+</table>
+<p>
+<code>preg</code>としては、以下のものを用いることができる。<br>
+<code>x</code>には、<code>0</code> (<code>PORT0</code>用) または <code>1</code> (<code>PORT1</code>用) が入る。<br>
+「出力」は汎用レジスタから<code>preg</code>にデータをコピーすること、「入力」は<code>preg</code>から汎用レジスタにデータをコピーすることである。
+</p>
+<table class="basicTable">
+<tr><th>preg</th><th>方向</th><th>説明</th></tr>
+<tr><td><code>PxOUT</code></td><td>出力・入力</td>
+<td>ポートに出力する値を表す。</td></tr>
+<tr><td><code>PxDRIVE</code></td><td>出力</td>
+<td>ポートの各ビットに値を出力するかを表す。(1:出力する、0:出力しない(Hi-Z))</td></tr>
+<tr><td><code>PxIN</code></td><td>入力</td>
+<td>ポートから読み取った値を表す。</td></tr>
+</table>
+
+<h3>ネイティブ命令</h3>
+<p>CalicoCPU自体で定義されている命令である。</p>
+<table class="basicTable">
+<tr><th>命令</th><th>意味</th><th>命令コード (ビット)</th><th>動作</th></tr>
+<tr><td><code>MOV rd, rs</code></td><td>レジスタ代入</td>
+<td><code>dd00ss00</code></td><td><code>rd ← rs</code></td></tr>
+<tr><td><code>ADD rd, rs</code></td><td>レジスタ加算</td>
+<td><code>dd00ss01</code></td><td><code>rd ← rd + rs</code></td></tr>
+<tr><td><code>NAND rd, rs</code></td><td>レジスタビットNAND</td>
+<td><code>dd00ss10</code></td><td><code>rd ← rd NAND rs</code></td></tr>
+<tr><td><code>SHL1 rd, width</code></td><td>左シフト</td>
+<td><code>dd000w11</code><br>width=2 → w=0, width=4 → w=1</td><td><code>rd ← rd &lt;&lt; width</code></td></tr>
+<tr><td><code>SHR1 rd, width</code></td><td>右シフト</td>
+<td><code>dd001w11</code><br>width=1 → w=0, width=2 → w=1</td><td><code>rd ← rd &gt;&gt; width</code> (論理シフト)</td></tr>
+<tr><td><code>MOVP rd, preg</code></td><td>ポート状態入力</td>
+<td><code>dd01xp00</code><br>preg=PxIN → p=0, preg=PxOUT → p=1</td><td><code>rd ← preg</code></td></tr>
+<tr><td><code>MOVP preg, rd</code></td><td>ポート状態出力</td>
+<td><code>dd01xp10</code><br>preg=PxOUT → p=0, preg=PxDRIVE → p=1</td><td><code>preg ← rd</code></td></tr>
+<tr><td><code>JAL rd, rs</code></td><td>サブルーチン呼び出し</td>
+<td><code>dd01ss01</code></td><td><code>rd ← PC+1<br>PC ← rs</code></td></tr>
+<tr><td><code>JNZ rd, rs</code></td><td>分岐</td>
+<td><code>dd01ss11</code></td><td><code>if (rd != 0) PC ← rs</code></td></tr>
+<tr><td><code>MOVI1 rd, imm</code></td><td>即値代入</td>
+<td><code>dd10mmmm</code><br>immは0～15が有効である。</td><td><code>rd ← imm</code> (ゼロ拡張)</td></tr>
+<tr><td><code>ADDI rd, imm</code></td><td>即値加算</td>
+<td><code>dd11mmmm</code><br>immは-8～7が有効である。</td><td><code>rd ← rd + imm</code> (符号拡張)</td></tr>
+</table>
+
+<h3>応用命令</h3>
+<p>
+アセンブラがネイティブ命令を組み合わせて実現する命令である。<br>
+命令数を指定する命令で、指定された命令数で表現できない場合はエラーになる。
+</p>
+<table class="basicTable">
+<tr><th>命令</th><th>意味</th><th>動作</th><th>ネイティブ命令数</th></tr>
+<tr><td><code>NOP</code></td><td>何もしない</td><td><code>A ← A</code></td><td>1</td></tr>
+<tr><td><code>NOT rd</code></td><td>レジスタビットNOT</td><td><code>rd ← NOT rd</code></td><td>1</td></tr>
+<tr><td><code>AND rd, rs</code><br>(rdとrsは別のレジスタ)</td><td>レジスタビットAND</td><td><code>rd ← rd AND rs</code></td><td>2</td><tr>
+<tr><td><code>OR rd, rs</code><br>(rdとrsは別のレジスタ)</td><td>レジスタビットOR</td><td><code>rd ← rd OR rs</code></td><td>4</td><tr>
+<tr><td><code>OR! rd, rs</code><br>(rdとrsは別のレジスタ)</td><td>レジスタビットOR<br>(rsの値を保持しない)</td><td><code>rd ← rd OR rs<br>rs ← 不定</code></td><td>3</td><tr>
+<tr><td><code>XOR rd, rs, rt</code><br>(rd、rs、rtは全て別のレジスタ)</td><td>レジスタビットXOR<br>(rtを作業用に用いる)</td><td><code>rd ← rd XOR rs<br>rt ← 不定</code></td><td>5</td><tr>
+<tr><td><code>SHL rd, width</code></td><td>左シフト<br>(命令数は自動)</td><td><code>rd ← rd &lt;&lt; width</code></td><td>0～3</td></tr>
+<tr><td><code>SHLk rd, width</code><br>(k=1,2,3)</td><td>左シフト<br>(命令数をkに指定)</td><td><code>rd ← rd &lt;&lt; width</code></td><td>k</td></tr>
+<tr><td><code>SHR rd, width</code></td><td>右シフト<br>(命令数は自動)</td><td><code>rd ← rd &gt;&gt; width</code> (論理シフト)</td><td>0～4</td></tr>
+<tr><td><code>SHRk rd, width</code><br>(k=1,2,3,4)</td><td>右シフト<br>(命令数をkに指定)</td><td><code>rd ← rd &gt;&gt; width</code> (論理シフト)</td><td>k</td></tr>
+<tr><td><code>IN rd, x</code><br>(x=0,1 (式使用可))</td><td>ポート入力</td><td><code>rd ← PxIN</code></td><td>1</td></tr>
+<tr><td><code>OUT x, rd</code><br>(x=0,1 (式使用可))</td><td>ポート出力</td><td><code>PxOUT ← rd</code></td><td>1</td></tr>
+<tr><td><code>DRIVE x, rd</code><br>(x=0,1 (式使用可))</td><td>ポート出力モード設定</td><td><code>PxDRIVE ← rd</code></td><td>1</td></tr>
+<tr><td><code>MOVI rd, imm</code><br>(-128≦imm≦255)</td><td>即値代入<br>(命令数は自動)</td><td><code>rd ← imm</code></td><td>1～3</td></tr>
+<tr><td><code>MOVIk rd, imm</code><br>(-128≦imm≦255、k=1,2,3)</td><td>即値代入<br>(命令数をkに指定)</td><td><code>rd ← imm</code></td><td>k</td></tr>
+</table>
+
+<h3>ヒント</h3>
+<p>
+直接ジャンプ命令は存在しない。<br>
+0番地でない<code>addr</code>にジャンプしたい場合は、作業用レジスタを<code>rd</code>として、
+</p>
+<pre><code>MOVI3 rd, addr
+JNZ rd, rd</code></pre>
+<p>
+とすればよい。<br>
+使える場合は、<code>MOVI3</code>のかわりにより少ない命令数の<code>MOVIk</code>を使ってもよい。<br>
+<code>MOVI3</code>のかわりに命令数を自動で決定する<code>MOVI</code>を用いると、ラベルが収束しなくなる可能性がある。
+</p>
+
+<hr>
+<p><a href="./">戻る</a></p>
+</body>
+</html>
