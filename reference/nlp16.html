@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>MikeAssembler リファレンス - NLP-16</title>
+<link href="reference.css" rel="stylesheet">
+</head>
+<body>
+<h1>MikeAssembler リファレンス - GMC-4</h1>
+<h2>アーキテクチャ名</h2>
+<p><code>nlp16</code></p>
+
+<h2>概要</h2>
+<p>
+NLP-16は、<a href="https://twitter.com/cherry_takuan">ちぇりーたくあん様</a>が開発したNAND(74HC00)だけで作る16bitCPUである。
+</p>
+<p><a href="https://cherry-takuan.org/article/?id=3">NAND(74HC00)だけで16bitCPUを作る[NLP-16]</a></p>
+
+<h2>レジスタ</h2>
+<p>
+NLP-16は、以下のレジスタを持つ。<br>
+「名前」はMikeAssemblerのオペランドで用いる名前であり、大文字・小文字は区別しない。
+</p>
+
+<table class="basicTable">
+<tr><th>名前</th><th>ID</th><th>説明</th></tr>
+<tr><td><code>ir1</code></td><td>0</td><td>IR1</td></tr>
+<tr><td><code>ir2</code></td><td>1</td><td>IR2</td></tr>
+<tr><td><code>ir3</code></td><td>3</td><td>IR3</td></tr>
+<tr><td><code>flag</code></td><td>4</td><td>Flag</td></tr>
+<tr><td><code>a</code></td><td>5</td><td>RegA</td></tr>
+<tr><td><code>b</code></td><td>6</td><td>RegB</td></tr>
+<tr><td><code>c</code></td><td>7</td><td>RegC</td></tr>
+<tr><td><code>d</code></td><td>8</td><td>RegD</td></tr>
+<tr><td><code>e</code></td><td>9</td><td>RegE (Serial I/O)</td></tr>
+<tr><td><code>serial</code></td><td>9</td><td>RegE (Serial I/O)</td></tr>
+<tr><td><code>ram</code></td><td>10</td><td>RAM (Device)</td></tr>
+<tr><td><code>device</code></td><td>10</td><td>RAM (Device)</td></tr>
+<tr><td><code>ua</code></td><td>11</td><td>Upper Address</td></tr>
+<tr><td><code>la</code></td><td>12</td><td>Lower Address</td></tr>
+<tr><td><code>ip</code></td><td>13</td><td>Program pointer</td></tr>
+<tr><td><code>sp</code></td><td>14</td><td>Stack pointer</td></tr>
+<tr><td><code>zero</code></td><td>15</td><td>Zero register</td></tr>
+</table>
+<p><a href="https://cherry-takuan.org/article/?id=14">出典</a></p>
+
+<p>
+レジスタも即値も指定できるオペランドにおいてレジスタ名が指定された場合、レジスタとして扱う。<br>
+例えば識別子<code>a</code>の値を即値として用いたい場合は、<code>+a</code>などとする。
+</p>
+
+<h2>命令セット</h2>
+<h3>条件実行</h3>
+<p>
+命令の後ろに以下の接尾辞をつけることで、実行する条件(Flagフィールド)を指定できる。<br>
+大文字・小文字は区別しない。
+</p>
+
+<table class="basicTable">
+<tr><th>接尾辞</th><th>実行する条件</th></tr>
+<tr><td><code>_nop</code></td><td>NOP</td></tr>
+<tr><td><code>_c</code></td><td>Cが立っているときに実行</td></tr>
+<tr><td><code>_v</code></td><td>Vが立っているときに実行</td></tr>
+<tr><td><code>_z</code></td><td>Zが立っているときに実行</td></tr>
+<tr><td><code>_s</code></td><td>Sが立っているときに実行</td></tr>
+<tr><td>(なし)</td><td>常に実行</td></tr>
+<tr><td><code>_nc</code></td><td>Cが立っていないときに実行</td></tr>
+<tr><td><code>_nv</code></td><td>Vが立っていないときに実行</td></tr>
+<tr><td><code>_nz</code></td><td>Zが立っていないときに実行</td></tr>
+<tr><td><code>_ns</code></td><td>Sが立っていないときに実行</td></tr>
+</table>
+
+<h3>即値サイズ指定</h3>
+<p>
+MikeAssemblerは、通常は即値の大きさに応じて自動で8bitか16bitかを決定する。<br>
+命令の後ろに<code>8</code>をつけると、強制的に8bit即値を用いる。<br>
+命令の後ろに<code>16</code>をつけると、強制的に16bit即値を用いる。<br>
+これらは、実行する条件を表す接尾辞を用いる場合はその前に指定する。<br>
+例えば、16bit即値を用い、Cが立っているときに実行するADD命令は <code>add16_c a, b, 10</code> のように書く。
+</p><p>
+即値を2個用いる場合、通常は8bit即値と16bit即値の両方を用いる。<br>
+この指定を行うと2個とも同じ即値を用い、値が違う場合はエラーとなる。<br>
+</p>
+
+<h3>命令セット</h3>
+<p>
+MikeAssemblerでは、以下の命令に対応している。<br>
+命令の大文字・小文字は区別しない。
+</p>
+
+<table class="basicTable">
+<tr><th colspan="2">演算命令</th></tr>
+<tr><th>命令</th><th>意味</th></tr>
+<tr><td><code>add 出力先, 入力A, 入力B</code></td><td>ADD</td></tr>
+<tr><td><code>sub 出力先, 入力A, 入力B</code></td><td>SUB</td></tr>
+<tr><td><code>addc 出力先, 入力A, 入力B</code></td><td>ADD with carry</td></tr>
+<tr><td><code>subc 出力先, 入力A, 入力B</code></td><td>SUB with carry</td></tr>
+<tr><td><code>or 出力先, 入力A, 入力B</code></td><td>OR</td></tr>
+<tr><td><code>not 出力先, 入力A</code></td><td>NOT</td></tr>
+<tr><td><code>xor 出力先, 入力A, 入力B</code></td><td>XOR</td></tr>
+<tr><td><code>and 出力先, 入力A, 入力B</code></td><td>AND</td></tr>
+<tr><td><code>inc 出力先, 入力A</code></td><td>INC</td></tr>
+<tr><td><code>dec 出力先, 入力A</code></td><td>DEC</td></tr>
+<tr><td><code>incc 出力先, 入力A</code></td><td>INC with carry</td></tr>
+<tr><td><code>decc 出力先, 入力A</code></td><td>DEC with carry</td></tr>
+<tr><td><code>slr 出力先, 入力A</code></td><td>SLR</td></tr>
+<tr><td><code>sll 出力先, 入力A</code></td><td>SLL</td></tr>
+<tr><td><code>sar 出力先, 入力A</code></td><td>SAR</td></tr>
+<tr><td><code>sal 出力先, 入力A</code></td><td>SAL</td></tr>
+<tr><td><code>ror 出力先, 入力A</code></td><td>ROR</td></tr>
+<tr><td><code>rol 出力先, 入力A</code></td><td>ROL</td></tr>
+
+<tr><th colspan="2">転送命令</th></tr>
+<tr><th>命令</th><th>意味</th></tr>
+<tr><td><code>mov 転送先, 転送元/即値</code></td><td>MOV / 即値代入</td></tr>
+
+<tr><th colspan="2">JMP命令</th></tr>
+<tr><th>命令</th><th>意味</th></tr>
+<tr><td><code>jmp レジスタ/即値</code></td><td>8bit絶対番地 / 16bit絶対番地 / レジスタ間接</td></tr>
+<tr><td><code>jmpr アドレス(即値)</code></td><td>自己相対(加算/減算)<br>
+加算か減算かはアドレスに応じて自動で決定する。<br>
+レジスタや生の即値をオペランドとするには、<code>jmpadd<code>/<code>jmpsub</code>の入力Aを<code>ip</code>にする。</td></tr>
+<tr><td><code>jmpadd 入力A, 入力B</code><td>レジスタ同士で計算して指定(加算)</td></tr>
+<tr><td><code>jmpsub 入力A, 入力B</code><td>レジスタ同士で計算して指定(減算)</td></tr>
+
+<tr><th colspan="2">スタック操作</th></tr>
+<tr><th>命令</th><th>意味</th></tr>
+<tr><td><code>push PUSH元Reg</code></td><td>PUSH</td></tr>
+<tr><td><code>pop POP先Reg</code></td><td>POP</td></tr>
+
+<tr><th colspan="2">サブルーチン命令</th></tr>
+<tr><th>命令</th><th>意味</th></tr>
+<tr><td><code>call レジスタ/即値</code></td><td>CALL 8bit絶対番地 / 16bit絶対番地 / レジスタ間接</td></tr>
+<tr><td><code>callr アドレス(即値)</code></td><td>CALL 自己相対(加算/減算)<br>
+加算か減算かはアドレスに応じて自動で決定する。<br>
+レジスタや生の即値をオペランドとするには、<code>calladd<code>/<code>callsub</code>の入力Aを<code>ip</code>にする。</td></tr>
+<tr><td><code>calladd 入力A, 入力B</code><td>CALL レジスタ同士で計算して指定(加算)</td></tr>
+<tr><td><code>callsub 入力A, 入力B</code><td>CALL レジスタ同士で計算して指定(減算)</td></tr>
+<tr><td><code>ret</code></td><td>RET</td></tr>
+<tr><td><code>iret</code></td><td>割り込みRET</td></tr>
+
+<tr><th colspan="2">メモリ操作</th></tr>
+<tr><th>命令</th><th>意味</th></tr>
+<tr><td><code>load LOAD先, レジスタ/即値</code></td><td>LOAD 8bit絶対番地 / 16bit絶対番地 / レジスタ間接</td></tr>
+<tr><td><code>loadr LOAD先, アドレス(即値)</code></td><td>LOAD 自己相対(加算/減算)<br>
+加算か減算かはアドレスに応じて自動で決定する。<br>
+レジスタや生の即値をオペランドとするには、<code>loadadd<code>/<code>loadsub</code>の入力Aを<code>ip</code>にする。</td></tr>
+<tr><td><code>loadadd LOAD先, 入力A, 入力B</code><td>LOAD レジスタ同士で計算して指定(加算)</td></tr>
+<tr><td><code>loadsub LOAD先, 入力A, 入力B</code><td>LOAD レジスタ同士で計算して指定(減算)</td></tr>
+<tr><td><code>store STORE元, レジスタ/即値</code></td><td>STORE 8bit絶対番地 / 16bit絶対番地 / レジスタ間接</td></tr>
+<tr><td><code>storer STORE元, アドレス(即値)</code></td><td>STORE 自己相対(加算/減算)<br>
+加算か減算かはアドレスに応じて自動で決定する。<br>
+レジスタや生の即値をオペランドとするには、<code>storeadd<code>/<code>storesub</code>の入力Aを<code>ip</code>にする。</td></tr>
+<tr><td><code>storeadd STORE元, 入力A, 入力B</code><td>STORE レジスタ同士で計算して指定(加算)</td></tr>
+<tr><td><code>storesub STORE元, 入力A, 入力B</code><td>STORE レジスタ同士で計算して指定(減算)</td></tr>
+
+<tr><th colspan="2">比較命令</th></tr>
+<tr><th>命令</th><th>意味</th></tr>
+<tr><td><code>cmp 入力A, 入力B</code></td><td>CMP</td></tr>
+
+<tr><th colspan="2">疑似命令</th></tr>
+<tr><th>命令</th><th>意味</th></tr>
+<tr><td><code>nop</code></td><td>1ワードのNOP (<code>ret_nop</code>)<br>
+実行する条件の指定・即値サイズ指定には対応しない。</td></tr>
+<tr><td><code>worddata 値 [, 値 [, ...]]</code></td><td>指定の値を各2バイトで順に配置する。<br>
+実行する条件の指定・即値サイズ指定には対応しない。<br>
+文字列データの配置には対応しない。</td></tr>
+</table>
+
+<p>命令のフォーマットやオペコードは、以下を参照のこと。</p>
+<ul>
+<li><a href="https://twitter.com/cherry_takuan/status/1565299552487239680">https://twitter.com/cherry_takuan/status/1565299552487239680</a></li>
+<li><a href="https://twitter.com/cherry_takuan/status/1565299557239386112">https://twitter.com/cherry_takuan/status/1565299557239386112</a></li>
+</ul>
+
+<h2>アドレスについて</h2>
+<p>
+NLP-16ではワード(2バイト)単位のアドレスを扱う一方、MikeAssemblerではバイト単位のアドレスを扱う。<br>
+そこで、NLP-16固有の命令においては、ラベルの値を自動的に2で割り、ワード単位に変換する。<br>
+ラベルの値が奇数の場合はエラーとなる。<br>
+なお、<code>define</code>で定義した識別子は変換しない。
+</p><p>
+一方、<code>org</code>、<code>define</code>、<code>data</code>系などのMikeAssembler共通の疑似命令においては、この変換を行わない。<br>
+そのため、以下の対応が必要である。
+</p>
+<ul>
+<li><code>org</code>においては、ワード単位のアドレスを2倍してバイト単位に変換する。</li>
+<li><code>define</code>や<code>data</code>系でラベルを用いてワード単位のアドレスを定義/配置する場合は、明示的に2で割る。</li>
+</ul>
+<p>
+なお、<code>worddata</code> 疑似命令はNLP-16固有であり、この明示的な変換は不要である。
+</p>
+
+<h3>サンプルプログラム</h3>
+<pre><code>target nlp16
+
+	; ラベルが自動でワード単位のアドレスに変換される
+	load a, data_label
+
+	; ラベルは自動で変換されるが、置かれているデータは変換されない
+	load b, addr_label
+	; bに格納したアドレス (data_label) から読み込む
+	load c, b
+
+addr_label:
+	; ラベルを明示的に2で割ってワード単位のアドレスに変換する
+	dataw data_label / 2
+
+data_label:
+	dataw 0
+</code></pre>
+
+<hr>
+<p><a href="./">戻る</a></p>
+</body>
+</html>
