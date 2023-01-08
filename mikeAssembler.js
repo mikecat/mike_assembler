@@ -577,17 +577,6 @@ const mikeAssembler = (function() {
 				"data": [],
 				"wordSize": 1
 			};
-		} else if (instLower === "outstart") {
-			if (ops.length !== 1) throw "outstart takes exactly 1 argument";
-			const startPos = evaluate(parse(tokenize(ops[0])), context.vars);
-			if (startPos < 0) throw "invalid position";
-			if (context.outStart !== null) throw "multiple outstart";
-			context.outStart = startPos;
-			return {
-				"nextPos": pos,
-				"data": [],
-				"wordSize": 1
-			};
 		} else if (instLower === "passlimit") {
 			if (ops.length !== 1) throw "passlimit takes exactly 1 argument";
 			const passLimit = evaluate(parse(tokenize(ops[0])), context.vars);
@@ -847,7 +836,6 @@ const mikeAssembler = (function() {
 			context.pass = pass;
 			context.passLimitSet = false;
 			context.target = null;
-			context.outStart = null;
 			context.endianness = "little";
 			context.posOffset = toBigInt(0);
 			context.vars = {};
