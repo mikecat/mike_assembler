@@ -466,14 +466,18 @@ const mikeAssembler = (function() {
 		"!=": function(a, b) { return toBigInt(a !== b ? 1 : 0); }
 	};
 
+	const isIntegerLiteral = function(str) {
+		return /^[0-9]+$/.test(str) || /^0o[0-7]+$/i.test(str) ||
+			/^0x[0-9a-f]+$/i.test(str) || /^0b[01]+$/i.test(str);
+	};
+
 	const evaluate = function(ast, vars, throwOnUndefinedIdentifier, hook) {
 		if ((typeof throwOnUndefinedIdentifier) === "undefined") throwOnUndefinedIdentifier = true;
 		if ((typeof hook) === "undefined") hook = null;
 		const hooked = hook === null ? null : hook(ast, vars);
 		if (hooked !== null) return hooked;
 		if (ast.kind === "value") {
-			if (/^[0-9]+$/.test(ast.value) || /^0o[0-7]+$/i.test(ast.value) ||
-			/^0x[0-9a-f]+$/i.test(ast.value) || /^0b[01]+$/i.test(ast.value)) {
+			if (isIntegerLiteral(ast.value)) {
 				return toBigInt(ast.value);
 			} else if (ast.value in vars) {
 				if (throwOnUndefinedIdentifier && vars[ast.value] === null) {
@@ -569,11 +573,44 @@ const mikeAssembler = (function() {
 		if (instLower === "org") {
 			if (ops.length !== 1 && ops.length !== 2) throw "org takes 1 or 2 argument";
 			const nextLabelPos = evaluate(parse(tokenize(ops[0])), context.vars);
-			const nextPos = ops.length === 2 ? evaluate(parse(tokenize(ops[1])), context.vars) : nextLabelPos;
+			const nextPos = (function() {
+				if (ops.length === 2) return evaluate(parse(tokenize(ops[1])), context.vars);
+				if (context.defaultPlace === null) return nextLabelPos;
+				const vars2 = Object.create(context.defaultPlace.vars);
+				vars2[context.defaultPlace.labelPlaceVar] = nextLabelPos;
+				const evaluated = evaluate(context.defaultPlace.expression, vars2, context.pass > 1);
+				if (evaluated === null) return nextLabelPos;
+				return evaluated;
+			})();
 			if (nextLabelPos < 0 || nextPos < 0) throw "invalid position";
 			context.posOffset = nextPos - nextLabelPos;
 			return {
 				"nextPos": nextLabelPos,
+				"data": [],
+				"wordSize": 1
+			};
+		} else if (instLower === "defaultplace") {
+			if (ops.length !== 2) throw "defaultplace takes exactly 2 arguments";
+			const labelPlaceVarNode = parse(tokenize(ops[0]));
+			if (labelPlaceVarNode.kind !== "value" || isIntegerLiteral(labelPlaceVarNode.value)) {
+				throw "1st argument of defaultplace must be a variable";
+			}
+			const labelPlaceVar = labelPlaceVarNode.value;
+			const expression = parse(tokenize(ops[1]));
+			const vars = Object.assign({}, context.vars);
+			if (context.pass > 1) {
+				// 未定義の識別子が無いかチェックする
+				const vars2 = Object.create(vars);
+				vars2[labelPlaceVar] = toBigInt(0);
+				evaluate(expression, vars2);
+			}
+			context.defaultPlace = {
+				"labelPlaceVar" : labelPlaceVar,
+				"expression": expression,
+				"vars": vars
+			};
+			return {
+				"nextPos": pos,
 				"data": [],
 				"wordSize": 1
 			};
@@ -813,6 +850,7 @@ const mikeAssembler = (function() {
 		"tokenize": tokenize,
 		"parse": parse,
 		"parseString": parseString,
+		"isIntegerLiteral": isIntegerLiteral,
 		"evaluate": evaluate,
 		"fitsInBitsSigned": fitsInBitsSigned,
 		"fitsInBitsUnsigned": fitsInBitsUnsigned
@@ -838,6 +876,7 @@ const mikeAssembler = (function() {
 			context.target = null;
 			context.endianness = "little";
 			context.posOffset = toBigInt(0);
+			context.defaultPlace = null;
 			context.vars = {};
 			context.defines = {};
 			if (pass !== 1) {
