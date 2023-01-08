@@ -30,7 +30,7 @@ const oneByOneOutputFormat = (function() {
 			if (df === "bin") return 2;
 			else if (df === "dec") return 10;
 			else if (df === "hexl" || df === "hexu") return 16;
-			throw "unknown data format: " + af;
+			throw "unknown data format: " + df;
 		})();
 		const wordSize = outputConfig.wordSize === "auto" ? -1 : parseInt(outputConfig.wordSize);
 
