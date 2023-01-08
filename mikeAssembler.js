@@ -626,6 +626,22 @@ const mikeAssembler = (function() {
 				"data": [],
 				"wordSize": 1
 			};
+		} else if (instLower === "outoption") {
+			const options = [];
+			for (let i = 0; i < ops.length; i++) {
+				const expr = parse(tokenize(ops[i]));
+				if (expr.kind === "str") {
+					options.push(parseString(expr.value));
+				} else {
+					options.push(evaluate(expr, context.vars));
+				}
+			}
+			return {
+				"nextPos": pos,
+				"data": [],
+				"wordSize": 1,
+				"outOption": options
+			};
 		} else if (instLower === "align") {
 			if (ops.length !== 1 && ops.length !== 2) throw "align takes 1 or 2 arguments";
 			const divisor = evaluate(parse(tokenize(ops[0])), context.vars);
@@ -931,7 +947,8 @@ const mikeAssembler = (function() {
 							"lineno": i + 1,
 							"pos": (lineParsed.inst === "org" ? res.nextPos : pos) + context.posOffset,
 							"data": wordsToData(res.data, res.wordSize, context.endianness),
-							"wordSize": res.wordSize
+							"wordSize": res.wordSize,
+							"outOption": ("outOption" in res ? res.outOption : null)
 						});
 						pos = res.nextPos;
 					} else {
@@ -940,7 +957,8 @@ const mikeAssembler = (function() {
 							"lineno": i + 1,
 							"pos": pos + context.posOffset,
 							"data": [],
-							"wordSize": 1
+							"wordSize": 1,
+							"outOption": null
 						});
 					};
 				} catch (e) {
