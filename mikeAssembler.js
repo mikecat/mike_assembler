@@ -1026,6 +1026,15 @@ if ((typeof window) !== "undefined") {
 		const outputArea = document.getElementById("output_area");
 		const messageArea = document.getElementById("message_area");
 
+		const enableDefaultByteOtherValue = function() {
+			settingForm.default_byte_other_value.disabled = !(settingForm.default_byte.value === "other");
+		};
+		enableDefaultByteOtherValue();
+		const defaultByteRadios = document.querySelectorAll("form#setting_form input[type=\"radio\"][name=\"default_byte\"]");
+		for (let i = 0; i < defaultByteRadios.length; i++) {
+			defaultByteRadios[i].addEventListener("change", enableDefaultByteOtherValue);
+		}
+
 		const getRadioValue = function(radio) {
 			if((typeof radio.value) !== "undefined") return radio.value;
 			for (let i = 0; i < radio.length; i++) {
@@ -1039,6 +1048,7 @@ if ((typeof window) !== "undefined") {
 				"outputFormat": getRadioValue(settingForm.output_format),
 				"wordSize": getRadioValue(settingForm.word_size),
 				"endianness": getRadioValue(settingForm.endianness),
+				"defaultByte": getRadioValue(settingForm.default_byte) === "other" ? settingForm.default_byte_other_value.value : getRadioValue(settingForm.default_byte),
 				"addressFormat": getRadioValue(settingForm.address_format),
 				"dataFormat": getRadioValue(settingForm.data_format)
 			};
