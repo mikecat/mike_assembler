@@ -60,17 +60,13 @@ const oneByOneOutputFormat = (function() {
 						let endIndex = startIndex + bytePerWord <= sortedParts[i].data.length ? bytePerWord : sortedParts[i].data.length - startIndex;
 						for (let l = 0; l < endIndex; l++) {
 							const b = sortedParts[i].data[startIndex + (outputConfig.endianness === "big" ? l : endIndex - l - 1)];
-							if (b === null) {
-								value = null;
-							} else if (value !== null) {
-								value = value * apis.toBigInt(256) + apis.toBigInt(b);
-							}
+							value = value * apis.toBigInt(256) + apis.toBigInt(b);
 							maxValue = maxValue * apis.toBigInt(lineWordSize > 0 ? 256 : 16);
 						}
 						const maxValueStr = (maxValue - apis.toBigInt(1)).toString(dataRadix);
-						let valueStr = value === null ? "" : value.toString(dataRadix);
+						let valueStr = value.toString(dataRadix);
 						if (outputConfig.dataFormat === "hexu") valueStr = valueStr.toUpperCase();
-						const valuePadding = value === null ? "?" : (dataRadix === 10 ? " " : "0");
+						const valuePadding = dataRadix === 10 ? " " : "0";
 						while (valueStr.length < maxValueStr.length) {
 							valueStr = valuePadding + valueStr;
 						}

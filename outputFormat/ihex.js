@@ -35,15 +35,7 @@ const ihexFormat = (function() {
 				currentDataStart = sortedParts[i].pos;
 			}
 			for (let j = 0; j < sortedParts[i].data.length; j++) {
-				if (sortedParts[i].data[j] === null) {
-					if (currentData.length > 0) {
-						mergedParts.push({"data": currentData, "pos": currentDataStart});
-					}
-					currentData = [];
-					currentDataStart = sortedParts[i].pos + apis.toBigInt(j + 1);
-				} else {
-					currentData.push(sortedParts[i].data[j]);
-				}
+				currentData.push(sortedParts[i].data[j]);
 			}
 		}
 		if (currentData.length > 0) {
