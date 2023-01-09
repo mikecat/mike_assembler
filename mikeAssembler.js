@@ -989,11 +989,20 @@ const mikeAssembler = (function() {
 			for (let i = 0; i < outputParts.length; i++) {
 				for (let j = 0; j < outputParts[i].data.length; j++) {
 					if (outputParts[i].data[j] === null) {
-						message += "line " + outputParts[i].lineno + ": warning: couldn't decide data\n";
+						message += "line " + outputParts[i].lineno + ": error: couldn't decide data\n";
+						error = true;
 						break;
 					}
 				}
 			}
+		}
+
+		if (error) {
+			return {
+				"output": "",
+				"message": message,
+				"error": error
+			};
 		}
 
 		let output;
