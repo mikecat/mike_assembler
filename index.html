@@ -5,6 +5,7 @@
 <title>MikeAssembler (Multiple Instruction Kindly Emitting Assembler)</title>
 <script src="mikeAssembler.js"></script>
 <script src="outputFormat/oneByOne.js"></script>
+<script src="outputFormat/dump.js"></script>
 <script src="outputFormat/ihex.js"></script>
 <script src="target/gmc4.js"></script>
 <script src="target/orange4.js"></script>
@@ -65,7 +66,7 @@ input[type="radio"]:not(:first-child) {
 <tr><td id="output_settings_output_format">output format</td><td>
 <input type="radio" name="output_format" value="raw" id="output_format_raw"><label for="output_format_raw">raw</label>
 <input type="radio" name="output_format" value="one-by-one" id="output_format_obo" checked="checked"><label for="output_format_obo">one-by-one</label>
-<input type="radio" disabled="disabled" name="output_format" value="dump" id="output_format_dump"><label for="output_format_dump">dump</label>
+<input type="radio" name="output_format" value="dump" id="output_format_dump"><label for="output_format_dump">dump</label>
 <input type="radio" name="output_format" value="ihex" id="output_format_ihex"><label for="output_format_ihex">ihex</label>
 <input type="radio" disabled="disabled" name="output_format" value="base64" id="output_format_base64"><label for="output_format_base64">base64</label>
 </td></tr>
@@ -81,9 +82,9 @@ input[type="radio"]:not(:first-child) {
 <input type="radio" name="endianness" value="big" id="endianness_big"><label for="endianness_big">big</label>
 </td></tr>
 <tr><td id="output_settings_default_byte">default byte</td><td>
-<input type="radio" disabled="disabled" name="default_byte" value="0" id="default_byte_0" checked="checked"><label for="default_byte_0">0x00</label>
-<input type="radio" disabled="disabled" name="default_byte" value="255" id="default_byte_255"><label for="default_byte_255">0xff</label>
-<input type="radio" disabled="disabled" name="default_byte" value="other" id="default_byte_other"><label for="default_byte_other">other:</label><input type="text" value="" name="default_byte_other_value" size="6" style="margin-left: 0.2em;">
+<input type="radio" name="default_byte" value="0" id="default_byte_0" checked="checked"><label for="default_byte_0">0x00</label>
+<input type="radio" name="default_byte" value="255" id="default_byte_255"><label for="default_byte_255">0xff</label>
+<input type="radio" name="default_byte" value="other" id="default_byte_other"><label for="default_byte_other">other:</label><input type="text" value="" name="default_byte_other_value" size="6" style="margin-left: 0.2em;">
 </td></tr>
 <tr><td id="output_settings_address_format">address format</td><td>
 <input type="radio" name="address_format" value="bin" id="address_format_binary"><label for="address_format_binary">binary</label>
