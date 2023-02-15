@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>MikeAssembler リファレンス - Intel 8080</title>
+<link href="reference.css" rel="stylesheet">
+<style>
+<!--
+.dataTable td:nth-child(1) {
+	text-align: center;
+}
+.dataTable td:nth-child(2) {
+	text-align: center;
+}
+
+.registerTable td:nth-child(2) {
+	text-align: center;
+}
+
+.registerPairTable td {
+	text-align: center;
+}
+
+.flagTable td:nth-child(3) {
+	text-align: center;
+}
+
+.insnTable td:nth-child(5) {
+	text-align: center;
+}
+-->
+</style>
+</head>
+<body>
+<h1>MikeAssembler リファレンス - Intel 8080</h1>
+<h2>アーキテクチャ名</h2>
+<p><code>8080</code></p>
+
+<h2>メモリ空間</h2>
+
+<p>
+Intel 8080 が扱うメモリはプログラムとデータで共通で、
+16ビット (0x0000 ～ 0xffff) のアドレスを用いてバイト単位でアクセスできる。
+</p><p>
+また、入出力は、8ビット (0x00 ～ 0xff) のアドレスを指定して1バイトを入出力できる。
+</p>
+
+<h2>レジスタ</h2>
+
+<p>
+Intel 8080 は、以下のレジスタを持つ。
+</p>
+<table class="basicTable registerTable">
+<tr><th>役割</th><th>レジスタ</th><th>サイズ</th></tr>
+<tr><td>アキュムレータ</td><td><code>A</code></td><td>8ビット</td></tr>
+<tr><td>汎用レジスタ</td><td><code>B, C, D, E, H, L</code></td><td>各8ビット×6個</td></tr>
+<tr><td>フラグレジスタ</td><td><code>F</code></td><td>8ビット</td></tr>
+<tr><td>プログラムカウンタ</td><td><code>PC</code></td><td>16ビット</td></tr>
+<tr><td>スタックポインタ</td><td><code>SP</code></td><td>16ビット</td></tr>
+<tr><td>割り込み許可フラグ</td><td><code>INTE</code></td><td>1ビット</td></tr>
+</table>
+<p>
+8ビットレジスタは、以下の16ビットのレジスタ対として用いることがある。
+</p>
+<table class="basicTable registerPairTable">
+<tr><th>レジスタ対名</th><th>上位8ビット</th><th>下位8ビット</th></tr>
+<tr><td><code>B</code></td><td><code>B</code></td><td><code>C</code></td></tr>
+<tr><td><code>D</code></td><td><code>D</code></td><td><code>E</code></td></tr>
+<tr><td><code>H</code></td><td><code>H</code></td><td><code>L</code></td></tr>
+<tr><td><code>PSW</code></td><td><code>A</code></td><td><code>F</code></td></tr>
+</table>
+<p>
+フラグレジスタの内容は、以下の通りである。
+</p>
+<table class="basicTable flagTable">
+<tr><th>ビット</th><th>名前</th><th>略称</th><th>説明</th></tr>
+<tr><td>0 (LSB)</td><td>Carry</td><td>C</td><td>キャリーやボローがあったことを示す。</td></tr>
+<tr><td>1</td><td>1</td><td>-</td><td>常に 1 となる。</td></tr>
+<tr><td>2</td><td>Parity</td><td>P</td><td>演算結果に「1」のビットが偶数個あったことを示す。</td></tr>
+<tr><td>3</td><td>0</td><td>-</td><td>常に 0 となる。</td></tr>
+<tr><td>4</td><td>Auxiliary Carry (AC)</td><td>A</td><td>下位ニブルから上位ニブルへのキャリーがあったことを示す。<br>(減算命令でもボローではなくキャリーを示す)</td></tr>
+<tr><td>5</td><td>0</td><td>-</td><td>常に 0 となる。</td></tr>
+<tr><td>6</td><td>Zero</td><td>Z</td><td>計算結果が 0 であったことを示す。</td></tr>
+<tr><td>7 (MSB)</td><td>Sign</td><td>S</td><td>計算結果が負 (最上位ビットが1) であったことを示す。</td></tr>
+</table>
+
+<h2>命令セット</h2>
+
+<p>
+MikeAssemblerでは、以下の命令をサポートしている。<br>
+命令およびレジスタ名の大文字・小文字は区別しない。
+</p>
+
+<h3>扱うデータ</h3>
+
+<p>
+機械語において、第1オペランドを <code>d</code>、第2オペランドを <code>s</code> で表す。<br>
+条件分岐命令の条件は <code>c</code> で表す。<br>
+16ビット即値は、下位8ビットを2バイト目に、上位8ビットを3バイト目に置く。
+</p>
+
+<table class="basicTable">
+<tr><th>内容</th><th>シンボル</th><th>取りうる値</th></tr>
+<tr><td>8ビットレジスタ/メモリ</td><td><code>r/m8</code></td><td><table class="basicTable dataTable">
+<tr><th>値</th><th>機械語</th><th>備考</th></tr>
+<tr><td><code>B</code></td><td><code>000</code></td><td>汎用レジスタ</td></tr>
+<tr><td><code>C</code></td><td><code>001</code></td><td>汎用レジスタ</td></tr>
+<tr><td><code>D</code></td><td><code>010</code></td><td>汎用レジスタ</td></tr>
+<tr><td><code>E</code></td><td><code>011</code></td><td>汎用レジスタ</td></tr>
+<tr><td><code>H</code></td><td><code>100</code></td><td>汎用レジスタ</td></tr>
+<tr><td><code>L</code></td><td><code>101</code></td><td>汎用レジスタ</td></tr>
+<tr><td><code>M</code></td><td><code>110</code></td><td>メモリ、アドレスはレジスタ対 <code>H</code> の値</td></tr>
+<tr><td><code>A</code></td><td><code>111</code></td><td>アキュムレータ</td></tr>
+</table></td></tr>
+<tr><td>16ビットレジスタ</td><td><code>r16</code></td><td><table class="basicTable dataTable">
+<tr><th>値</th><th>機械語</th><th>備考</th></tr>
+<tr><td><code>B</code></td><td><code>00</code></td><td>レジスタ対</td></tr>
+<tr><td><code>D</code></td><td><code>01</code></td><td>レジスタ対</td></tr>
+<tr><td><code>H</code></td><td><code>10</code></td><td>レジスタ対</td></tr>
+<tr><td><code>SP</code></td><td><code>11</code></td><td>スタックポインタ</td></tr>
+</table></td><tr>
+<tr><td>16ビットレジスタ<br>(スタック)</td><td><code>r16stack</code></td><td><table class="basicTable dataTable">
+<tr><th>値</th><th>機械語</th><th>備考</th></tr>
+<tr><td><code>B</code></td><td><code>00</code></td><td>レジスタ対</td></tr>
+<tr><td><code>D</code></td><td><code>01</code></td><td>レジスタ対</td></tr>
+<tr><td><code>H</code></td><td><code>10</code></td><td>レジスタ対</td></tr>
+<tr><td><code>PSW</code></td><td><code>11</code></td><td>レジスタ対</td></tr>
+</table></td><tr>
+<tr><td>16ビットレジスタ<br>(アドレス)</td><td><code>r16addr</code></td><td><table class="basicTable dataTable">
+<tr><th>値</th><th>機械語</th><th>備考</th></tr>
+<tr><td><code>B</code></td><td><code>0</code></td><td>レジスタ対</td></tr>
+<tr><td><code>D</code></td><td><code>1</code></td><td>レジスタ対</td></tr>
+</table></td><tr>
+<tr><td>8ビット即値</td><td><code>imm8</code></td><td>-128 ～ 255 の整数</td></tr>
+<tr><td>16ビット即値</td><td><code>imm16</code></td><td>-32,768 ～ 65,535 の整数</td></tr>
+<tr><td>8ビット即値<br>(アドレス)</td><td><code>iaddr8</code></td><td>0 ～ 255 の整数</td></tr>
+<tr><td>16ビット即値<br>(アドレス)</td><td><code>iaddr16</code></td><td>0 ～ 65,535 の整数</td></tr>
+<tr><td>ハンドラID</td><td><code>exp</code></td><td>0 ～ 7 の整数</td></tr>
+</table>
+
+<h3>命令セット</h3>
+
+<p>
+「フラグ」は命令によって値が変化するフラグを示す。<br>
+「動作」は逐次実行である。すなわち、後の処理では前の処理で変化した後の値を用いる。<br>
+<code>PC</code> (プログラムカウンタ) は、実行中の命令の次の命令のアドレスを表す。<br>
+16ビットのデータ転送は、リトルエンディアン(下位バイトを小さい値のアドレスに格納する)で行う。
+</p>
+
+<table class="basicTable insnTable">
+<tr><th colspan="5">データ転送命令 (8ビット)</th></tr>
+<tr><th>命令</th><th>機械語</th><th>動作</th><th>解説</th><th>フラグ</th></tr>
+<tr><td><code>MOV r/m8<sub>1</sub>, r/m8<sub>2</sub></code></td><td><code>01dddsss</code></td>
+<td><code>r/m8<sub>1</sub> ← r/m8<sub>2</sub></code></td>
+<td>レジスタやメモリの値を別のまたは同一(NOP)のレジスタやメモリに代入する。<br>
+<code>r/m8<sub>1</sub> と <code>r/m8<sub>2</sub> の両方を <code>M</code> にすることはできない。</td><td>-</td></tr>
+<tr><td><code>MVI r/m8, imm8</code></td><td><code>00ddd110 ssssssss</code></td>
+<td><code>r/m8 ← imm8</code></td>
+<td>レジスタやメモリに即値を代入する。</td><td>-</td></tr>
+<tr><td><code>STAX r16addr</code></td><td><code>000d0010</code></td>
+<td><code>[r16addr] ← A</code></td>
+<td>アキュムレータの値をメモリのレジスタ対が指す位置にストアする。</td><td>-</td></tr>
+<tr><td><code>LDAX r16addr</code></td><td><code>000d1010</code></td>
+<td><code>A ← [r16addr]</code></td>
+<td>メモリのレジスタ対が指す位置からアキュムレータに値をロードする。</td><td>-</td></tr>
+<tr><td><code>STA iaddr16</code></td><td><code>00110010 dddddddd dddddddd</code></td>
+<td><code>[iaddr16] ← A</code></td>
+<td>アキュムレータの値をメモリの即値で指定する位置にストアする。</td><td>-</td></tr>
+<tr><td><code>LDA iaddr16</code></td><td><code>00111010 dddddddd dddddddd</code></td>
+<td><code>A ← [iaddr16]</code></td>
+<td>メモリの即値で指定する位置からアキュムレータに値をロードする。</td><td>-</td></tr>
+
+<tr><th colspan="5">データ転送命令 (16ビット)</th></tr>
+<tr><th>命令</th><th>機械語</th><th>動作</th><th>解説</th><th>フラグ</th></tr>
+<tr><td><code>LXI r16, imm16</code></td><td><code>00dd0001 ssssssss ssssssss</code></td>
+<td><code>r16 ← imm16</code></td>
+<td>レジスタ対またはスタックポインタに即値を代入する。</td><td>-</td></tr>
+<tr><td><code>SHLD iaddr16</code></td><td><code>00100010 dddddddd dddddddd</code></td>
+<td><code>[iaddr16] ← {H,L}</code></td>
+<td>レジスタ対 <code>H</code> の値をメモリの即値で指定する位置にストアする。</td><td>-</td></tr>
+<tr><td><code>LHLD iaddr16</code></td><td><code>00101010 dddddddd dddddddd</code></td>
+<td><code>{H,L} ← [iaddr16]</code></td>
+<td>メモリの即値で指定する位置からレジスタ対 <code>H</code> に値をロードする。</td><td>-</td></tr>
+<tr><td><code>XCHG</code></td><td><code>11101011</code></td>
+<td><code>temp ← {H,L}; {H,L} ← {D,E}; {D,E} ← temp</code></td>
+<td>レジスタ対 <code>D</code> とレジスタ対 <code>H</code> の値を交換する。</td><td>-</td></tr>
+
+<tr><th colspan="5">演算命令 (8ビット)</th></tr>
+<tr><th>命令</th><th>機械語</th><th>動作</th><th>解説</th><th>フラグ</th></tr>
+<tr><td><code>INR r/m8</code></td><td><code>00ddd100</code></td>
+<td><code>r/m8 ← r/m8 + 1</code></td>
+<td>レジスタまたはメモリの値をインクリメントする。(1を加える)</td><td>S Z A P</td></tr>
+<tr><td><code>DCR r/m8</code></td><td><code>00ddd101</code></td>
+<td><code>r/m8 ← r/m8 - 1</code></td>
+<td>レジスタまたはメモリの値をデクリメントする。(1を引く)</td><td>S Z A P</td></tr>
+<tr><td><code>ADD r/m8</code></td><td><code>10000ddd</code></td>
+<td><code>A ← A + r/m8</code></td>
+<td>アキュムレータにレジスタまたはメモリの値を加える。</td><td>S Z A P C</td></tr>
+<tr><td><code>ADC r/m8</code></td><td><code>10001ddd</code></td>
+<td><code>A ← A + r/m8 + Carry</code></td>
+<td>アキュムレータにレジスタまたはメモリの値とキャリーの値を加える。</td><td>S Z A P C</td></tr>
+<tr><td><code>SUB r/m8</code></td><td><code>10010ddd</code></td>
+<td><code>A ← A - r/m8</code></td>
+<td>アキュムレータからレジスタまたはメモリの値を引く。</td><td>S Z A P C</td></tr>
+<tr><td><code>SBB r/m8</code></td><td><code>10011ddd</code></td>
+<td><code>A ← A - r/m8 - Carry</code></td>
+<td>アキュムレータからレジスタまたはメモリの値とキャリー(ボロー)の値を引く。</td><td>S Z A P C</td></tr>
+<tr><td><code>ANA r/m8</code></td><td><code>10100ddd</code></td>
+<td><code>A ← A &amp; r/m8</code></td>
+<td>アキュムレータにレジスタまたはメモリの値をビットANDする。<br>Carry フラグは 0 になる。</td><td>S Z A P C</td></tr>
+<tr><td><code>XRA r/m8</code></td><td><code>10101ddd</code></td>
+<td><code>A ← A ^ r/m8</code></td>
+<td>アキュムレータにレジスタまたはメモリの値をビットXORする。<br>Carry フラグは 0 になる。</td><td>S Z A P C</td></tr>
+<tr><td><code>ORA r/m8</code></td><td><code>10110ddd</code></td>
+<td><code>A ← A | r/m8</code></td>
+<td>アキュムレータにレジスタまたはメモリの値をビットORする。<br>Carry フラグは 0 になる。</td><td>S Z A P C</td></tr>
+<tr><td><code>CMP r/m8</code></td><td><code>10111ddd</code></td>
+<td><code>A - r/m8</code></td>
+<td>アキュムレータからレジスタまたはメモリの値を引き、差の値を捨てる。(比較)</td><td>S Z A P C</td></tr>
+<tr><td><code>ADI imm8</code></td><td><code>11000110 dddddddd</code></td>
+<td><code>A ← A + imm8</code></td>
+<td>アキュムレータに即値を加える。</td><td>S Z A P C</td></tr>
+<tr><td><code>ACI imm8</code></td><td><code>11001110 dddddddd</code></td>
+<td><code>A ← A + imm8 + Carry</code></td>
+<td>アキュムレータに即値とキャリーの値を加える。</td><td>S Z A P C</td></tr>
+<tr><td><code>SUI imm8</code></td><td><code>11010110 dddddddd</code></td>
+<td><code>A ← A - imm8</code></td>
+<td>アキュムレータから即値を引く。</td><td>S Z A P C</td></tr>
+<tr><td><code>SBI imm8</code></td><td><code>11011110 dddddddd</code></td>
+<td><code>A ← A - imm8 - Carry</code></td>
+<td>アキュムレータから即値とキャリー(ボロー)の値を引く。</td><td>S Z A P C</td></tr>
+<tr><td><code>ANI imm8</code></td><td><code>11100110 dddddddd</code></td>
+<td><code>A ← A &amp; imm8</code></td>
+<td>アキュムレータに即値をビットANDする。<br>Carry フラグは 0 になる。</td><td>S Z A P C</td></tr>
+<tr><td><code>XRI imm8</code></td><td><code>11101110 dddddddd</code></td>
+<td><code>A ← A ^ imm8</code></td>
+<td>アキュムレータに即値をビットXORする。<br>Carry フラグは 0 になる。</td><td>S Z A P C</td></tr>
+<tr><td><code>ORI imm8</code></td><td><code>11110110 dddddddd</code></td>
+<td><code>A ← A | imm8</code></td>
+<td>アキュムレータに即値をビットORする。<br>Carry フラグは 0 になる。</td><td>S Z A P C</td></tr>
+<tr><td><code>CPI imm8</code></td><td><code>11111110 dddddddd</code></td>
+<td><code>A - imm8</code></td>
+<td>アキュムレータから即値を引き、差の値を捨てる。(比較)</td><td>S Z A P C</td></tr>
+<tr><td><code>RLC</code></td><td><code>00000111</code></td>
+<td><code>Carry ← A[7]; A ← {A[6:0],A[7]}</code></td>
+<td>アキュムレータを1ビット左ローテートする。</td><td>C</td></tr>
+<tr><td><code>RRC</code></td><td><code>00001111</code></td>
+<td><code>Carry ← A[0]; A ← {A[0],A[7:1]}</code></td>
+<td>アキュムレータを1ビット右ローテートする。</td><td>C</td></tr>
+<tr><td><code>RAL</code></td><td><code>00010111</code></td>
+<td><code>{Carry,A} ← {A,Carry}</code></td>
+<td>アキュムレータを1ビット左シフトし、最下位ビットに Carry フラグの値を入れる。</td><td>C</td></tr>
+<tr><td><code>RAR</code></td><td><code>00011111</code></td>
+<td><code>{A,Carry} ← {Carry,A}</code></td>
+<td>アキュムレータを1ビット右シフトし、最上位ビットに Carry フラグの値を入れる。</td><td>C</td></tr>
+<tr><td><code>CMA</code></td><td><code>00101111</code></td>
+<td><code>A ← ~A</code></td>
+<td>アキュムレータをビットNOTする。</td><td>-</td></tr>
+<tr><td><code>DAA</code></td><td><code>00100111</code></td>
+<td><code>if (A[3:0] &gt; 9 || AC) A ← A + 6;<br>
+if (A[7:4] &gt; 9 || Carry) A[7:4] ← A[7:4] + 6</code></td>
+<td>アキュムレータの加算結果を4ビット2桁のBCDに変換する。<br>
+Carry フラグは、後半の処理でキャリーが発生した場合 1 になり、そうでない場合は変化しない。</td><td>S Z A P C</td></tr>
+
+<tr><th colspan="5">演算命令 (16ビット)</th></tr>
+<tr><th>命令</th><th>機械語</th><th>動作</th><th>解説</th><th>フラグ</th></tr>
+<tr><td><code>DAD r16</code></td><td><code>00dd1001</code></td>
+<td><code>{H,L} ← {H,L} + r16</code></td>
+<td>レジスタ対 <code>H</code> にレジスタ対またはスタックポインタの値を加える。<br>
+Carry フラグは(下位バイトではなく)最上位からのキャリーを表す。</td><td>C</td></tr>
+<tr><td><code>INX r16</code></td><td><code>00dd0011</code></td>
+<td><code>r16 ← r16 + 1</code></td>
+<td>レジスタ対またはスタックポインタの値をインクリメントする。(1を加える)</td><td>-</td></tr>
+<tr><td><code>DCX r16</code></td><td><code>00dd1011</code></td>
+<td><code>r16 ← r16 - 1</code></td>
+<td>レジスタ対またはスタックポインタの値をデクリメントする。(1を引く)</td><td>-</td></tr>
+
+<tr><th colspan="5">スタック操作命令</th></tr>
+<tr><th>命令</th><th>機械語</th><th>動作</th><th>解説</th><th>フラグ</th></tr>
+<tr><td><code>XTHL</code></td><td><code>11100011</code></td>
+<td><code>temp ← {H,L}; {H,L} ← [SP]; [SP] ← temp</code></td>
+<td>レジスタ対 <code>H</code> の値とスタックトップの値を交換する。</td><td>-</td></tr>
+<tr><td><code>PUSH r16stack</code></td><td><code>11dd0101</code></td>
+<td><code>SP ← SP - 2; [SP] ← r16stack</code></td>
+<td>スタックポインタの値から2を引き、新しいスタックポインタが指す位置にレジスタ対の値をストアする。<br>
+(スタックにレジスタ対の値をプッシュする)</td><td>-</td></tr>
+<tr><td><code>POP r16stack</code></td><td><code>11dd0001</code></td>
+<td><code>r16stack ← [SP]; SP ← SP + 2</code></td>
+<td>スタックポインタが指す位置からレジスタ対に値をロードしたあと、スタックポインタの値に2を足す。<br>
+(スタックからレジスタ対に値をポップする)<br>
+レジスタ対 <code>PSW</code> にロードする場合、フラグがそれに応じて変化する。<br>
+それ以外のレジスタ対にロードする場合、フラグは変化しない。</td><td>S Z A P C</td></tr>
+<tr><td><code>SPHL</code></td><td><code>11111001</code></td>
+<td><code>SP ← {H,L}</code></td>
+<td>スタックポインタにレジスタ対 <code>H</code> の値を代入する。</td><td>-</td></tr>
+
+<tr><th colspan="5">分岐命令</th></tr>
+<tr><th>命令</th><th>機械語</th><th>動作</th><th>解説</th><th>フラグ</th></tr>
+<tr><td><code>PCHL</code></td><td><code>11101001</code></td>
+<td><code>PC ← {H,L}</code></td>
+<td>無条件で、レジスタ対 <code>H</code> が指す位置へジャンプする。</td><td>-</td></tr>
+<tr><td><code>JMP iaddr16</code></td><td><code>11000011 dddddddd dddddddd</code></td>
+<td><code>PC ← iaddr16</code></td>
+<td>無条件で、即値が指す位置へジャンプする。</td><td>-</td></tr>
+<tr><td><code>Jcc iaddr16</code></td><td><code>11ccc010 dddddddd dddddddd</code></td>
+<td><code>if (cc) PC ← iaddr16</code></td>
+<td>条件を満たす場合、即値が指す位置へジャンプする。<br>条件を満たさない場合は何もしない。</td><td>-</td></tr>
+<tr><td><code>CALL iaddr16</code></td><td><code>11001101 dddddddd dddddddd</code></td>
+<td><code>SP ← SP - 2; [SP] ← PC; PC ← iaddr16</code></td>
+<td>無条件で、次の命令のアドレスをスタックにプッシュし、即値が指す位置へジャンプする。<br>
+(サブルーチンコール)</td><td>-</td></tr>
+<tr><td><code>Ccc iaddr16</code></td><td><code>11ccc100 dddddddd dddddddd</code></td>
+<td><code>if (cc) { SP ← SP - 2; [SP] ← PC; PC ← iaddr16 }</code></td>
+<td>条件を満たす場合、次の命令のアドレスをスタックにプッシュし、即値が指す位置へジャンプする。<br>
+条件を満たさない場合は何もしない。</td><td>-</td></tr>
+<tr><td><code>RET</code></td><td><code>11001001</code></td>
+<td><code>PC ← [SP]; SP ← SP + 2</code></td>
+<td>無条件で、スタックからアドレスをポップし、そのアドレスが指す位置へジャンプする。<br>
+(サブルーチンからの復帰)</td><td>-</td></tr>
+<tr><td><code>Rcc</code></td><td><code>11ccc000</code></td>
+<td><code>if (cc) { PC ← [SP]; SP ← SP + 2 }</code></td>
+<td>条件を満たす場合、スタックからアドレスをポップし、そのアドレスが指す位置へジャンプする。<br>
+条件を満たさない場合は何もしない。</td><td>-</td></tr>
+
+<tr><th colspan="5">入出力命令</th></tr>
+<tr><th>命令</th><th>機械語</th><th>動作</th><th>解説</th><th>フラグ</th></tr>
+<tr><td><code>OUT iaddr8</code></td><td><code>11010011 dddddddd</code></td>
+<td><code>PORT(iaddr8) ← A</code></td>
+<td><code>iaddr8</code> が示す出力ポートにアキュムレータの値を出力する。</td><td>-</td></tr>
+<tr><td><code>IN iaddr8</code></td><td><code>11011011 dddddddd</code></td>
+<td><code>A ← PORT(iaddr8)</code></td>
+<td><code>iaddr8</code> が示す入力ポートから値を読み取り、アキュムレータに代入する。</td><td>-</td></tr>
+
+<tr><th colspan="5">割り込み制御命令</th></tr>
+<tr><th>命令</th><th>機械語</th><th>動作</th><th>解説</th><th>フラグ</th></tr>
+<tr><td><code>DI</code></td><td><code>11110011</code></td>
+<td><code>INTE ← 0</code></td>
+<td>割り込みを禁止する。</td><td>-</td></tr>
+<tr><td><code>EI</code></td><td><code>11111011</code></td>
+<td><code>INTE ← 1</code></td>
+<td>割り込みを許可する。</td><td>-</td></tr>
+<tr><td><code>RST exp</code></td><td><code>11ddd111</code></td>
+<td><code>SP ← SP - 2; [SP] ← PC; PC ← exp &lt;&lt; 3</code></td>
+<td>次の命令のアドレスをスタックにプッシュし、<code>exp</code> の 8 倍のアドレスにジャンプする。</td><td>-</td></tr>
+
+<tr><th colspan="5">その他命令</th></tr>
+<tr><th>命令</th><th>機械語</th><th>動作</th><th>解説</th><th>フラグ</th></tr>
+<tr><td><code>NOP</code></td><td><code>00000000</code></td>
+<td>-</td>
+<td>何もしない。</td><td>-</td></tr>
+<tr><td><code>HLT</code></td><td><code>01110110</code></td>
+<td>-</td>
+<td>割り込みがかかるまで、プログラムの実行を停止する。</td><td>-</td></tr>
+<tr><td><code>STC</code></td><td><code>00110111</code></td>
+<td><code>Carry ← 1</code></td>
+<td>Carry フラグを 1 にする。</td><td>C</td></tr>
+<tr><td><code>CMC</code></td><td><code>00111111</code></td>
+<td><code>Carry ← ~Carry</code></td>
+<td>Carry フラグを反転する。</td><td>C</td></tr>
+</table>
+
+<h3>条件分岐の条件</h3>
+
+<p>
+条件分岐命令では、<code>cc</code> として以下の条件を用いることができる。
+</p>
+
+<table class="basicTable dataTable">
+<tr><th>記号</th><th>機械語</th><th>ジャンプする条件</th><th>条件の解釈</tr>
+<tr><td><code>NZ</code></td><td><code>000</code></td><td>Zero フラグが 0</td><td>計算結果が非零、比較の結果不一致</td></tr>
+<tr><td><code>Z</code></td><td><code>001</code></td><td>Zero フラグが 1</td><td>計算結果が零、比較の結果一致</td></tr>
+<tr><td><code>NC</code></td><td><code>010</code></td><td>Carry フラグが 0</td><td>キャリー/ボローなし、比較の結果引かれる数が引く数以上</td></tr>
+<tr><td><code>C</code></td><td><code>011</code></td><td>Carry フラグが 1</td><td>キャリー/ボローあり、比較の結果引かれる数が引く数未満</td></tr>
+<tr><td><code>PO</code></td><td><code>100</code></td><td>Parity フラグが 0</td><td>計算結果に「1」のビットが奇数個</td></tr>
+<tr><td><code>PE</code></td><td><code>101</code></td><td>Parity フラグが 1</td><td>計算結果に「1」のビットが偶数個</td></tr>
+<tr><td><code>P</code></td><td><code>110</code></td><td>Sign フラグが 0</td><td>計算結果が非負 (最上位ビットが 0)</td></tr>
+<tr><td><code>M</code></td><td><code>111</code></td><td>Sign フラグが 1</td><td>計算結果が負 (最上位ビットが 1)</tr>
+</table>
+
+<p>
+たとえば、Zero フラグが 0 のときジャンプし、1 のとき素通りする命令は <code>JNZ iaddr16</code> である。
+</p>
+
+<h2>参考資料</h2>
+
+<ul>
+<li>大内淳義『マイコン入門』(廣済堂出版、1977年)</li>
+<li><a href="http://my-web-site.iobb.net/~yuki/2017-06/mpu/8080op/">懐かしいインテル8080命令セットのメモ | ある計算機屋さんの手帳</a></li>
+<li><a href="https://pastraiser.com/cpu/i8080/i8080_opcodes.html">Intel 8080 OPCODES</a></li>
+<li><a href="https://altairclone.com/downloads/manuals/8080%20Programmers%20Manual.pdf">intel 8080 Assembly Programming Manual</a></li>
+</ul>
+
+<hr>
+<p><a href="./">戻る</a></p>
+</body>
+</html>
