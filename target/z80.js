@@ -288,6 +288,24 @@ const z80Target = (function() {
 		if (instUpper === "LD") {
 			if (ops.length !== 2) throw "LD takes 2 arguments";
 			resultData = assembleLD(ops, context);
+		} else if (instUpper === "PUSH") {
+			if (ops.length !== 1) throw "PUSH takes 1 argument";
+			const opUpper = ops[0].toUpperCase();
+			if (opUpper in regTable.qq) {
+				// PUSH qq
+				resultData = [0xc5 | (regTable.qq[opUpper] << 4)];
+			} else if (opUpper === "IX") resultData = [0xdd, 0xe5]; // PUSH IX
+			else if (opUpper === "IY") resultData = [0xfd, 0xe5]; // PUSH IY
+			else throw "invalid opeland for PUSH";
+		} else if (instUpper === "POP") {
+			if (ops.length !== 1) throw "POP takes 1 argument";
+			const opUpper = ops[0].toUpperCase();
+			if (opUpper in regTable.qq) {
+				// POP qq
+				resultData = [0xc1 | (regTable.qq[opUpper] << 4)];
+			} else if (opUpper === "IX") resultData = [0xdd, 0xe1]; // POP IX
+			else if (opUpper === "IY") resultData = [0xfd, 0xe1]; // POP IY
+			else throw "invalid opeland for POP";
 		}
 
 		if (resultData === null) {
