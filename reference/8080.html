@@ -259,7 +259,7 @@ MikeAssemblerでは、以下の命令をサポートしている。<br>
 <tr><td><code>DAA</code></td><td><code>00100111</code></td>
 <td><code>if (A[3:0] &gt; 9 || AC) A ← A + 6;<br>
 if (A[7:4] &gt; 9 || Carry) A[7:4] ← A[7:4] + 6</code></td>
-<td>アキュムレータの加算結果を4ビット2桁のBCDに変換する。<br>
+<td>4ビット2桁のBCDとして、アキュムレータの加算結果を補正する。<br>
 Carry フラグは、後半の処理でキャリーが発生した場合 1 になり、そうでない場合は変化しない。</td><td>S Z A P C</td></tr>
 
 <tr><th colspan="5">演算命令 (16ビット)</th></tr>
