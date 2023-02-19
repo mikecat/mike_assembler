@@ -195,6 +195,27 @@ const z80Target = (function() {
 		},
 	};
 
+	const bitGroupInsts = {
+		"BIT": {
+			"r": {"op": [0xcb, 0x40], "idx": 1, "offset": 0, "bitIdx": 1, "bitOffset": 3},
+			"HL": {"op": [0xcb, 0x46], "bitIdx": 1, "bitOffset": 3},
+			"IX": {"op": [0xdd, 0xcb, 0, 0x46], "idx": 2, "bitIdx": 3, "bitOffset": 3},
+			"IY": {"op": [0xfd, 0xcb, 0, 0x46], "idx": 2, "bitIdx": 3, "bitOffset": 3},
+		},
+		"SET": {
+			"r": {"op": [0xcb, 0xc0], "idx": 1, "offset": 0, "bitIdx": 1, "bitOffset": 3},
+			"HL": {"op": [0xcb, 0xc6], "bitIdx": 1, "bitOffset": 3},
+			"IX": {"op": [0xdd, 0xcb, 0, 0xc6], "idx": 2, "bitIdx": 3, "bitOffset": 3},
+			"IY": {"op": [0xfd, 0xcb, 0, 0xc6], "idx": 2, "bitIdx": 3, "bitOffset": 3},
+		},
+		"RES": {
+			"r": {"op": [0xcb, 0x80], "idx": 1, "offset": 0, "bitIdx": 1, "bitOffset": 3},
+			"HL": {"op": [0xcb, 0x86], "bitIdx": 1, "bitOffset": 3},
+			"IX": {"op": [0xdd, 0xcb, 0, 0x86], "idx": 2, "bitIdx": 3, "bitOffset": 3},
+			"IY": {"op": [0xfd, 0xcb, 0, 0x86], "idx": 2, "bitIdx": 3, "bitOffset": 3},
+		},
+	};
+
 	// (IX+d) 的なやつをパースする
 	// 引数
 	//   ast : パース対象のASTノード
@@ -436,7 +457,9 @@ const z80Target = (function() {
 		const opUpper = ops[0].toUpperCase();
 		if (opUpper in regTable.r) {
 			const res = table.r.op.slice(0);
-			res[table.r.idx] |= regTable.r[opUpper] << table.r.offset;
+			if (res[table.r.idx] !== null) {
+				res[table.r.idx] |= regTable.r[opUpper] << table.r.offset;
+			}
 			return res;
 		}
 		const opParsed = apis.parse(apis.tokenize(ops[0]));
@@ -465,6 +488,30 @@ const z80Target = (function() {
 		}
 		throw "invalid argument for " + name;
 	};
+
+	const assembleBitGroup = (function() {
+		const keyList = ["r", "HL", "IX", "IY"];
+
+		return function(name, ops, table, context) {
+			const apis = context.apis;
+			if (ops.length !== 2) throw name + " takes 2 arguments";
+			const b = apis.evaluate(apis.parse(apis.tokenize(ops[0])), context.vars, context.pass > 1);
+			if (b !== null && !apis.fitsInBitsUnsigned(b, 3)) {
+				throw "value out-of-range";
+			}
+			const bValue = apis.fromBigInt(b) & 7;
+			const tableCopy = Object.assign({}, table);
+			for (let i = 0; i < keyList.length; i++) {
+				const t = tableCopy[keyList[i]];
+				if (b === null) {
+					t.op[t.bitIdx] = null;
+				} else {
+					t.op[t.bitIdx] |= bValue << t.bitOffset;
+				}
+			}
+			return assembleSorM(name, [ops[1]], tableCopy, context);
+		};
+	})();
 
 	const assembleLine = function(pos, inst, ops, context) {
 		const apis = context.apis;
@@ -584,6 +631,8 @@ const z80Target = (function() {
 			else if(value === apis.toBigInt(1)) resultData = [0xed, 0x56];
 			else if(value === apis.toBigInt(2)) resultData = [0xed, 0x5e];
 			else throw "invalid argument for IM";
+		} else if (instUpper in bitGroupInsts) {
+			resultData = assembleBitGroup(instUpper, ops, bitGroupInsts[instUpper], context);
 		}
 
 		if (resultData === null) {
