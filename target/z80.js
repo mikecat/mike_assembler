@@ -216,6 +216,17 @@ const z80Target = (function() {
 		},
 	};
 
+	const ccTable = {
+		"NZ": 0,
+		"Z": 1,
+		"NC": 2,
+		"C": 3,
+		"PO": 4,
+		"PE": 5,
+		"P": 6,
+		"M": 7,
+	};
+
 	// (IX+d) 的なやつをパースする
 	// 引数
 	//   ast : パース対象のASTノード
@@ -633,6 +644,80 @@ const z80Target = (function() {
 			else throw "invalid argument for IM";
 		} else if (instUpper in bitGroupInsts) {
 			resultData = assembleBitGroup(instUpper, ops, bitGroupInsts[instUpper], context);
+		} else if (instUpper === "JP" || instUpper === "CALL") {
+			if (ops.length !== 1 && ops.length !== 2) throw instUpper + " takes 1 or 2 arguments";
+			resultData = null;
+			if (instUpper === "JP" && ops.length === 1) {
+				const opParsed = apis.parse(apis.tokenize(ops[0]));
+				if (opParsed.kind === "op" && opParsed.value === "()" && opParsed.children.length === 1) {
+					const regNode = opParsed.children[0];
+					if (regNode.kind === "value"){
+						const regUpper = regNode.value.toUpperCase();
+						if (regUpper === "HL") resultData = [0xe9];
+						else if (regUpper === "IX") resultData = [0xdd, 0xe9];
+						else if (regUpper === "IY") resultData = [0xfd, 0xe9];
+					}
+				}
+			}
+			if (resultData === null) {
+				resultData = [];
+				if (ops.length === 1) {
+					resultData.push(instUpper === "JP" ? 0xc3 : 0xcd);
+				} else {
+					const ccUpper = ops[0].toUpperCase();
+					if(!(ccUpper in ccTable)) throw "invalid condition for " + instUpper;
+					resultData.push((instUpper === "JP" ? 0xc2 : 0xc4) | (ccTable[ccUpper] << 3));
+				}
+				const nn = apis.evaluate(apis.parse(apis.tokenize(ops[ops.length - 1])), context.vars, context.pass > 1);
+				if (nn !== null && !apis.fitsInBitsUnsigned(nn, 16)) throw "address out-of-range";
+				if (nn === null) {
+					resultData.push(null);
+					resultData.push(null);
+				} else {
+					const nnValue = apis.fromBigInt(nn);
+					resultData.push(nnValue & 0xff);
+					resultData.push((nnValue >> 8) & 0xff);
+				}
+			}
+		} else if (instUpper === "JR" || instUpper === "DJNZ") {
+			if (ops.length !== 1 && instUpper !== "JR") throw instUpper + " takes 1 argument";
+			if (ops.length !== 1 && ops.length !== 2) throw instUpper + " takes 1 or 2 arguments";
+			resultData = [];
+			if (ops.length === 1) {
+				resultData.push(instUpper === "JR" ? 0x18 : 0x10);
+			} else {
+				const ccUpper = ops[0].toUpperCase();
+				if(!(ccUpper in ccTable) || ccTable[ccUpper] > 3) throw "invalid condition for " + instUpper;
+				resultData.push(0x20 | (ccTable[ccUpper] << 3));
+			}
+			const addr = apis.evaluate(apis.parse(apis.tokenize(ops[ops.length - 1])), context.vars, context.pass > 1);
+			if (addr === null) {
+				resultData.push(null);
+			} else {
+				const e = addr - pos - apis.toBigInt(2);
+				if (!apis.fitsInBitsSigned(e, 8)) throw "address out-of-range";
+				resultData.push(apis.fromBigInt(e) & 0xff);
+			}
+		} else if (instUpper === "RET") {
+			if (ops.length !== 0 && ops.length !== 1) throw instUpper + " takes 0 or 1 arguments";
+			if (ops.length === 0) {
+				resultData = [0xc9];
+			} else {
+				const ccUpper = ops[0].toUpperCase();
+				if(!(ccUpper in ccTable)) throw "invalid condition for " + instUpper;
+				resultData = [0xc0 | (ccTable[ccUpper] << 3)];
+			}
+		} else if (instUpper === "RST") {
+			if (ops.length !== 1) throw instUpper + " takes 1 argument";
+			const p = apis.evaluate(apis.parse(apis.tokenize(ops[0])), context.vars, context.pass > 1);
+			if (p === null) {
+				resultData = [null];
+			} else {
+				if (p < apis.toBigInt(0) || apis.toBigInt(0x38) < p || p % apis.toBigInt(8) !== apis.toBigInt(0)) {
+					throw "invalid argument for " + instUpper;
+				}
+				resultData = [0xc7 | apis.fromBigInt(p)];
+			}
 		}
 
 		if (resultData === null) {
