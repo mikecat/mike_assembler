@@ -576,6 +576,14 @@ const z80Target = (function() {
 			else resultData = assembleSorM(instUpper, ops, sOrMInsts[instUpper], context);
 		} else if (instUpper in sOrMInsts) {
 			resultData = assembleSorM(instUpper, ops, sOrMInsts[instUpper], context);
+		} else if (instUpper === "IM") {
+			if (ops.length !== 1) throw "IM takes 1 argument";
+			const value = apis.evaluate(apis.parse(apis.tokenize(ops[0])), context.vars, context.pass > 1);
+			if (value === null) resultData = [0xed, null];
+			else if(value === apis.toBigInt(0)) resultData = [0xed, 0x46];
+			else if(value === apis.toBigInt(1)) resultData = [0xed, 0x56];
+			else if(value === apis.toBigInt(2)) resultData = [0xed, 0x5e];
+			else throw "invalid argument for IM";
 		}
 
 		if (resultData === null) {
