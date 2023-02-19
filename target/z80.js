@@ -718,6 +718,50 @@ const z80Target = (function() {
 				}
 				resultData = [0xc7 | apis.fromBigInt(p)];
 			}
+		} else if (instUpper == "IN") {
+			if (ops.length !== 2) throw instUpper + " takes 2 arguments";
+			const regUpper = ops[0].toUpperCase();
+			const mem = parseMemory(apis.parse(apis.tokenize(ops[1])), {"C": false}, context);
+			resultData = null;
+			if (mem !== null) {
+				if (mem.reg === "C") {
+					if (regUpper in regTable.r) {
+						resultData = [0xed, 0x40 | (regTable.r[regUpper] << 3)];
+					}
+				} else if ("disp" in mem) {
+					const n = mem.disp;
+					if (n !== null && !apis.fitsInBitsUnsigned(n, 8)) throw "port out-of-range";
+					if (regUpper === "A") {
+						resultData = [
+							0xdb,
+							n === null ? null : apis.fromBigInt(n) & 0xff
+						];
+					}
+				}
+			}
+			if (resultData === null) throw "invalid argument for " + instUpper;
+		} else if (instUpper == "OUT") {
+			if (ops.length !== 2) throw instUpper + " takes 2 arguments";
+			const mem = parseMemory(apis.parse(apis.tokenize(ops[0])), {"C": false}, context);
+			const regUpper = ops[1].toUpperCase();
+			resultData = null;
+			if (mem !== null) {
+				if (mem.reg === "C") {
+					if (regUpper in regTable.r) {
+						resultData = [0xed, 0x41 | (regTable.r[regUpper] << 3)];
+					}
+				} else if ("disp" in mem) {
+					const n = mem.disp;
+					if (n !== null && !apis.fitsInBitsUnsigned(n, 8)) throw "port out-of-range";
+					if (regUpper === "A") {
+						resultData = [
+							0xd3,
+							n === null ? null : apis.fromBigInt(n) & 0xff
+						];
+					}
+				}
+			}
+			if (resultData === null) throw "invalid argument for " + instUpper;
 		}
 
 		if (resultData === null) {
