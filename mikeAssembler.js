@@ -914,7 +914,16 @@ const mikeAssembler = (function() {
 
 			for (let i = 0; i < lines.length; i++) {
 				try {
-					if (pass === 1) linesParsed.push(parseLine(lines[i]));
+					if (pass === 1) {
+						try {
+							linesParsed.push(parseLine(lines[i]));
+						} catch (e) {
+							if (linesParsed.length < i + 1) {
+								linesParsed.push(parseLine(""));
+							}
+							throw e;
+						}
+					}
 					const lineParsed = linesParsed[i];
 					if (lineParsed.label !== null) {
 						if (lineParsed.label in context.labels ||
