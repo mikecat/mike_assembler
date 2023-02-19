@@ -276,7 +276,7 @@ const z80Target = (function() {
 				}
 			}
 			// その他
-			throw "invalid opelands for LD";
+			throw "invalid arguments for LD";
 		};
 	})();
 
@@ -296,7 +296,7 @@ const z80Target = (function() {
 				resultData = [0xc5 | (regTable.qq[opUpper] << 4)];
 			} else if (opUpper === "IX") resultData = [0xdd, 0xe5]; // PUSH IX
 			else if (opUpper === "IY") resultData = [0xfd, 0xe5]; // PUSH IY
-			else throw "invalid opeland for PUSH";
+			else throw "invalid argument for PUSH";
 		} else if (instUpper === "POP") {
 			if (ops.length !== 1) throw "POP takes 1 argument";
 			const opUpper = ops[0].toUpperCase();
@@ -305,7 +305,7 @@ const z80Target = (function() {
 				resultData = [0xc1 | (regTable.qq[opUpper] << 4)];
 			} else if (opUpper === "IX") resultData = [0xdd, 0xe1]; // POP IX
 			else if (opUpper === "IY") resultData = [0xfd, 0xe1]; // POP IY
-			else throw "invalid opeland for POP";
+			else throw "invalid argument for POP";
 		} else if (instUpper === "EX") {
 			if (ops.length !== 2) throw "EX takes 2 arguments";
 			const op1Upper = ops[0].toUpperCase(), op2Upper = ops[1].toUpperCase();
@@ -324,7 +324,7 @@ const z80Target = (function() {
 					else if (op2Upper === "IX") resultData = [0xdd, 0xe3];
 					else if (op2Upper === "IY") resultData = [0xfd, 0xe3];
 				}
-				if (resultData === null) throw "invalid opelands for EX";
+				if (resultData === null) throw "invalid arguments for EX";
 			}
 		}
 
