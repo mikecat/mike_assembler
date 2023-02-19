@@ -110,7 +110,11 @@ const mikeAssembler = (function() {
 					} else {
 						// 文字列外
 						if (c === "(" || c === "[" || c === "{" || c === "\"" || c === "'") {
-							parenthesisStack.push(c);
+							// Z80の EX AF, AF' でエラーにならないようにするため、
+							// アルファベットの直後のシングルクォートは無視する
+							if (c !== "'" || (i === 0 || !/[a-zA-Z]/.test(line.charAt(i - 1)))) {
+								parenthesisStack.push(c);
+							}
 						} else if (c === ")") {
 							if (pLast !== "(") throw "parenthesis mismatch";
 							parenthesisStack.pop();

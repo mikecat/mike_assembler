@@ -306,6 +306,26 @@ const z80Target = (function() {
 			} else if (opUpper === "IX") resultData = [0xdd, 0xe1]; // POP IX
 			else if (opUpper === "IY") resultData = [0xfd, 0xe1]; // POP IY
 			else throw "invalid opeland for POP";
+		} else if (instUpper === "EX") {
+			if (ops.length !== 2) throw "EX takes 2 arguments";
+			const op1Upper = ops[0].toUpperCase(), op2Upper = ops[1].toUpperCase();
+			if (op1Upper === "DE" && op2Upper === "HL") {
+				// EX DE, HL
+				resultData = [0xeb];
+			} else if (op1Upper === "AF" && op2Upper === "AF'") {
+				// EX AF, AF'
+				resultData = [0x08];
+			} else {
+				resultData = null;
+				const parsed = apis.parse(apis.tokenize(ops[0]));
+				if (parsed.kind === "op" && parsed.value === "()" && parsed.children.length === 1 &&
+				parsed.children[0].kind === "value" && parsed.children[0].value.toUpperCase() === "SP") {
+					if (op2Upper === "HL") resultData = [0xe3];
+					else if (op2Upper === "IX") resultData = [0xdd, 0xe3];
+					else if (op2Upper === "IY") resultData = [0xfd, 0xe3];
+				}
+				if (resultData === null) throw "invalid opelands for EX";
+			}
 		}
 
 		if (resultData === null) {
