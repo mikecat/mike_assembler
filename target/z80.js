@@ -45,6 +45,43 @@ const z80Target = (function() {
 		},
 	};
 
+	const noArgumentsInsts = {
+		"EXX": [0xd9],
+		"LDI": [0xed, 0xa0],
+		"LDIR": [0xed, 0xb0],
+		"LDD": [0xed, 0xa8],
+		"LDDR": [0xed, 0xb8],
+		"CPI": [0xed, 0xa1],
+		"CPIR": [0xed, 0xb1],
+		"CPD": [0xed, 0xa9],
+		"CPDR": [0xed, 0xb9],
+		"DAA": [0x27],
+		"CPL": [0x2f],
+		"NEG": [0xed, 0x44],
+		"CCF": [0x3f],
+		"SCF": [0x37],
+		"NOP": [0x00],
+		"HALT": [0x76],
+		"DI": [0xf3],
+		"EI": [0xfb],
+		"RLCA": [0x07],
+		"RLA": [0x17],
+		"RRCA": [0x0f],
+		"RRA": [0x1f],
+		"RLD": [0xed, 0x6f],
+		"RRD": [0xed, 0x67],
+		"RETI": [0xed, 0x4d],
+		"RETN": [0xed, 0x45],
+		"INI": [0xed, 0xa2],
+		"INIR": [0xed, 0xb2],
+		"IND": [0xed, 0xaa],
+		"INDR": [0xed, 0xba],
+		"OUTI": [0xed, 0xa3],
+		"OTIR": [0xed, 0xb3],
+		"OUTD": [0xed, 0xab],
+		"OTDR": [0xed, 0xbb],
+	};
+
 	// (IX+d) 的なやつをパースする
 	// 引数
 	//   ast : パース対象のASTノード
@@ -326,6 +363,8 @@ const z80Target = (function() {
 				}
 				if (resultData === null) throw "invalid arguments for EX";
 			}
+		} else if (instUpper in noArgumentsInsts) {
+			resultData = noArgumentsInsts[instUpper];
 		}
 
 		if (resultData === null) {
