@@ -82,6 +82,119 @@ const z80Target = (function() {
 		"OTDR": [0xed, 0xbb],
 	};
 
+	const sOrMInsts = {
+		"ADD": {
+			"r": {"op": [0x80], "idx": 0, "offset": 0},
+			"n": {"op": [0xc6, 0], "idx": 1},
+			"HL": {"op": [0x86]},
+			"IX": {"op": [0xdd, 0x86, 0], "idx": 2},
+			"IY": {"op": [0xfd, 0x86, 0], "idx": 2},
+		},
+		"ADC": {
+			"r": {"op": [0x88], "idx": 0, "offset": 0},
+			"n": {"op": [0xce, 0], "idx": 1},
+			"HL": {"op": [0x8e]},
+			"IX": {"op": [0xdd, 0x8e, 0], "idx": 2},
+			"IY": {"op": [0xfd, 0x8e, 0], "idx": 2},
+		},
+		"SUB": {
+			"r": {"op": [0x90], "idx": 0, "offset": 0},
+			"n": {"op": [0xd6, 0], "idx": 1},
+			"HL": {"op": [0x96]},
+			"IX": {"op": [0xdd, 0x96, 0], "idx": 2},
+			"IY": {"op": [0xfd, 0x96, 0], "idx": 2},
+		},
+		"SBC": {
+			"r": {"op": [0x98], "idx": 0, "offset": 0},
+			"n": {"op": [0xde, 0], "idx": 1},
+			"HL": {"op": [0x9e]},
+			"IX": {"op": [0xdd, 0x9e, 0], "idx": 2},
+			"IY": {"op": [0xfd, 0x9e, 0], "idx": 2},
+		},
+		"AND": {
+			"r": {"op": [0xa0], "idx": 0, "offset": 0},
+			"n": {"op": [0xe6, 0], "idx": 1},
+			"HL": {"op": [0xa6]},
+			"IX": {"op": [0xdd, 0xa6, 0], "idx": 2},
+			"IY": {"op": [0xfd, 0xa6, 0], "idx": 2},
+		},
+		"OR": {
+			"r": {"op": [0xb0], "idx": 0, "offset": 0},
+			"n": {"op": [0xf6, 0], "idx": 1},
+			"HL": {"op": [0xb6]},
+			"IX": {"op": [0xdd, 0xb6, 0], "idx": 2},
+			"IY": {"op": [0xfd, 0xb6, 0], "idx": 2},
+		},
+		"XOR": {
+			"r": {"op": [0xa8], "idx": 0, "offset": 0},
+			"n": {"op": [0xee, 0], "idx": 1},
+			"HL": {"op": [0xae]},
+			"IX": {"op": [0xdd, 0xae, 0], "idx": 2},
+			"IY": {"op": [0xfd, 0xae, 0], "idx": 2},
+		},
+		"CP": {
+			"r": {"op": [0xb8], "idx": 0, "offset": 0},
+			"n": {"op": [0xfe, 0], "idx": 1},
+			"HL": {"op": [0xbe]},
+			"IX": {"op": [0xdd, 0xbe, 0], "idx": 2},
+			"IY": {"op": [0xfd, 0xbe, 0], "idx": 2},
+		},
+		"INC": {
+			"r": {"op": [0x04], "idx": 0, "offset": 3},
+			"HL": {"op": [0x34]},
+			"IX": {"op": [0xdd, 0x34, 0], "idx": 2},
+			"IY": {"op": [0xfd, 0x34, 0], "idx": 2},
+		},
+		"DEC": {
+			"r": {"op": [0x05], "idx": 0, "offset": 3},
+			"HL": {"op": [0x35]},
+			"IX": {"op": [0xdd, 0x35, 0], "idx": 2},
+			"IY": {"op": [0xfd, 0x35, 0], "idx": 2},
+		},
+		"RLC": {
+			"r": {"op": [0xcb, 0x00], "idx": 1, "offset": 0},
+			"HL": {"op": [0xcb, 0x06]},
+			"IX": {"op": [0xdd, 0xcb, 0, 0x06], "idx": 2},
+			"IY": {"op": [0xfd, 0xcb, 0, 0x06], "idx": 2},
+		},
+		"RL": {
+			"r": {"op": [0xcb, 0x10], "idx": 1, "offset": 0},
+			"HL": {"op": [0xcb, 0x16]},
+			"IX": {"op": [0xdd, 0xcb, 0, 0x16], "idx": 2},
+			"IY": {"op": [0xfd, 0xcb, 0, 0x16], "idx": 2},
+		},
+		"RRC": {
+			"r": {"op": [0xcb, 0x08], "idx": 1, "offset": 0},
+			"HL": {"op": [0xcb, 0x0e]},
+			"IX": {"op": [0xdd, 0xcb, 0, 0x0e], "idx": 2},
+			"IY": {"op": [0xfd, 0xcb, 0, 0x0e], "idx": 2},
+		},
+		"RR": {
+			"r": {"op": [0xcb, 0x18], "idx": 1, "offset": 0},
+			"HL": {"op": [0xcb, 0x1e]},
+			"IX": {"op": [0xdd, 0xcb, 0, 0x1e], "idx": 2},
+			"IY": {"op": [0xfd, 0xcb, 0, 0x1e], "idx": 2},
+		},
+		"SLA": {
+			"r": {"op": [0xcb, 0x20], "idx": 1, "offset": 0},
+			"HL": {"op": [0xcb, 0x26]},
+			"IX": {"op": [0xdd, 0xcb, 0, 0x26], "idx": 2},
+			"IY": {"op": [0xfd, 0xcb, 0, 0x26], "idx": 2},
+		},
+		"SRA": {
+			"r": {"op": [0xcb, 0x28], "idx": 1, "offset": 0},
+			"HL": {"op": [0xcb, 0x2e]},
+			"IX": {"op": [0xdd, 0xcb, 0, 0x2e], "idx": 2},
+			"IY": {"op": [0xfd, 0xcb, 0, 0x2e], "idx": 2},
+		},
+		"SRL": {
+			"r": {"op": [0xcb, 0x38], "idx": 1, "offset": 0},
+			"HL": {"op": [0xcb, 0x3e]},
+			"IX": {"op": [0xdd, 0xcb, 0, 0x3e], "idx": 2},
+			"IY": {"op": [0xfd, 0xcb, 0, 0x3e], "idx": 2},
+		},
+	};
+
 	// (IX+d) 的なやつをパースする
 	// 引数
 	//   ast : パース対象のASTノード
@@ -317,6 +430,42 @@ const z80Target = (function() {
 		};
 	})();
 
+	const assembleSorM = function(name, ops, table, context) {
+		const apis = context.apis;
+		if (ops.length !== 1) throw name + " takes 1 argument";
+		const opUpper = ops[0].toUpperCase();
+		if (opUpper in regTable.r) {
+			const res = table.r.op.slice(0);
+			res[table.r.idx] |= regTable.r[opUpper] << table.r.offset;
+			return res;
+		}
+		const opParsed = apis.parse(apis.tokenize(ops[0]));
+		const mem = parseMemory(opParsed, HLIXdIYd, context);
+		if (mem !== null) {
+			if (mem.reg === "HL") {
+				return table.HL.op;
+			} else if (mem.reg === "IX" || mem.reg === "IY") {
+				const disp = ("disp" in mem) ? mem.disp : apis.toBigInt(0);
+				if (disp !== null && !apis.fitsInBitsSigned(disp, 8)) {
+					throw "displacement out-of-range";
+				}
+				const res = table[mem.reg].op.slice(0);
+				res[table[mem.reg].idx] = disp === null ? null : apis.fromBigInt(disp) & 0xff;
+				return res;
+			}
+		}
+		if ("n" in table) {
+			const n = apis.evaluate(opParsed, context.vars, context.pass > 1);
+			if (n !== null && !apis.fitsInBitsUnsigned(n, 8) && !apis.fitsInBitsSigned(n, 8)) {
+				throw "value out-of-range";
+			}
+			const res = table.n.op.slice(0);
+			res[table.n.idx] = n === null ? null : apis.fromBigInt(n) & 0xff;
+			return res;
+		}
+		throw "invalid argument for " + name;
+	};
+
 	const assembleLine = function(pos, inst, ops, context) {
 		const apis = context.apis;
 		const instUpper = inst.toUpperCase();
@@ -365,6 +514,68 @@ const z80Target = (function() {
 			}
 		} else if (instUpper in noArgumentsInsts) {
 			resultData = noArgumentsInsts[instUpper];
+		} else if (instUpper === "ADD") {
+			if (ops.length !== 2) throw "ADD takes 2 arguments";
+			const op1Upper = ops[0].toUpperCase(), op2Upper = ops[1].toUpperCase();
+			resultData = null;
+			if (op1Upper === "A") {
+				resultData = assembleSorM(instUpper, [ops[1]], sOrMInsts[instUpper], context);
+			} else if (op1Upper === "HL") {
+				if (op2Upper in regTable.ss) {
+					resultData = [0x09 | (regTable.ss[op2Upper] << 4)];
+				}
+			} else if (op1Upper === "IX") {
+				if (op2Upper in regTable.pp) {
+					resultData = [0xdd, 0x09 | (regTable.pp[op2Upper] << 4)];
+				}
+			} else if (op1Upper === "IY") {
+				if (op2Upper in regTable.rr) {
+					resultData = [0xfd, 0x09 | (regTable.rr[op2Upper] << 4)];
+				}
+			}
+			if(resultData === null) throw "invalid arguments for ADD";
+		} else if (instUpper === "ADC") {
+			if (ops.length !== 2) throw "ADC takes 2 arguments";
+			const op1Upper = ops[0].toUpperCase(), op2Upper = ops[1].toUpperCase();
+			resultData = null;
+			if (op1Upper === "A") {
+				resultData = assembleSorM(instUpper, [ops[1]], sOrMInsts[instUpper], context);
+			} else if (op1Upper === "HL") {
+				if (op2Upper in regTable.ss) {
+					resultData = [0xed, 0x4a | (regTable.ss[op2Upper] << 4)];
+				}
+			}
+			if(resultData === null) throw "invalid arguments for ADC";
+		} else if (instUpper === "SBC") {
+			if (ops.length !== 2) throw "SBC takes 2 arguments";
+			const op1Upper = ops[0].toUpperCase(), op2Upper = ops[1].toUpperCase();
+			resultData = null;
+			if (op1Upper === "A") {
+				resultData = assembleSorM(instUpper, [ops[1]], sOrMInsts[instUpper], context);
+			} else if (op1Upper === "HL") {
+				if (op2Upper in regTable.ss) {
+					resultData = [0xed, 0x42 | (regTable.ss[op2Upper] << 4)];
+				}
+			}
+			if(resultData === null) throw "invalid arguments for SBC";
+		} else if (instUpper === "INC") {
+			if (ops.length !== 1) throw "INC takes 1 argument";
+			const opUpper = ops[0].toUpperCase();
+			resultData = null;
+			if (opUpper in regTable.ss) resultData = [0x03 | (regTable.ss[opUpper] << 4)];
+			else if (opUpper === "IX") resultData = [0xdd, 0x23];
+			else if (opUpper === "IY") resultData = [0xfd, 0x23];
+			else resultData = assembleSorM(instUpper, ops, sOrMInsts[instUpper], context);
+		} else if (instUpper === "DEC") {
+			if (ops.length !== 1) throw "DEC takes 1 argument";
+			const opUpper = ops[0].toUpperCase();
+			resultData = null;
+			if (opUpper in regTable.ss) resultData = [0x0b | (regTable.ss[opUpper] << 4)];
+			else if (opUpper === "IX") resultData = [0xdd, 0x2b];
+			else if (opUpper === "IY") resultData = [0xfd, 0x2b];
+			else resultData = assembleSorM(instUpper, ops, sOrMInsts[instUpper], context);
+		} else if (instUpper in sOrMInsts) {
+			resultData = assembleSorM(instUpper, ops, sOrMInsts[instUpper], context);
 		}
 
 		if (resultData === null) {
