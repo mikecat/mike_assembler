@@ -4,11 +4,97 @@
 <meta charset="UTF-8">
 <title>MikeAssembler リファレンス - Z80</title>
 <link href="reference.css" rel="stylesheet">
+<style>
+.firstColumnCenteredTable td:first-child {
+	text-align: center;
+}
+
+.flagTable td:nth-child(2) {
+	text-align: center;
+}
+
+.centeredTable td {
+	text-align: center;
+}
+</style>
 </head>
 <body>
 <h1>MikeAssembler リファレンス - Z80</h1>
 <h2>アーキテクチャ名</h2>
 <p><code>z80</code></p>
+
+<h2>メモリ空間</h2>
+
+<p>
+Z80のメモリ空間はプログラムとデータで共通で、16ビットのアドレスにより1バイト単位でアクセスできる。
+</p>
+<p>
+また、8ビットの入力ポートおよび出力ポートを256個ずつもち、8ビットのアドレスにより指定する。
+</p>
+
+<h2>レジスタ</h2>
+
+<p>
+Z80は、以下のレジスタを持つ。
+</p>
+
+<h3>アキュムレータおよびフラグレジスタ</h3>
+
+<table class="basicTable firstColumnCenteredTable">
+<tr><th>レジスタ</th><th>説明</th></tr>
+<tr><td><code>A</code></td><td>アキュムレータ (メイン)</td></tr>
+<tr><td><code>F</code></td><td>フラグレジスタ (メイン)</td></tr>
+<tr><td><code>A'</code></td><td>アキュムレータ (代替)</td></tr>
+<tr><td><code>F'</code></td><td>フラグレジスタ (代替)</td></tr>
+</table>
+
+<p>
+アキュムレータは8ビットで、演算の引数や結果を格納する。<br>
+フラグレジスタは8ビットで、以下のような演算結果の情報を格納する。
+</p>
+
+<table class="basicTable flagTable">
+<tr><th>ビット</th><th>記号</th><th>名前</th><th>説明</th></tr>
+<tr><td>7 (MSB)</td><td><code>S</code></td><td>Sign Flag</td><td>演算結果の最上位ビット</td></tr>
+<tr><td>6</td><td><code>Z</code></td><td>Zero Flag</td><td>演算結果がゼロか / 比較や検索で一致したか</td></tr>
+<tr><td>5</td><td><code>X</code></td><td>-</td><td>-</td></tr>
+<tr><td>4</td><td><code>H</code></td><td>Half Carry Flag</td><td>8ビット演算の真ん中でキャリーやボローがあったか</tr>
+<tr><td>3</td><td><code>X</code></td><td>-</td><td>-</td></tr>
+<tr><td>2</td><td><code>P/V</code></td><td>Parity/Overflow Flag</td><td>符号あり加減算がオーバーフローしたか / ビット演算の結果の1のビットが偶数個か / など</td></tr>
+<tr><td>1</td><td><code>N</code></td><td>Add/Subtract</td><td>加算後は0、減算後は1 (10進補正用)</td></tr>
+<tr><td>0 (LSB)</td><td><code>C</td><td>Carry Flag</td><td>キャリーやボローがあったか / シフトではみ出たビット</td></tr>
+</table>
+
+<p>
+メインと代替のアキュムレータおよびフラグレジスタの値は、<code>EX AF, AF'</code> 命令により同時に入れ替えることができる。
+</p>
+
+<h3>汎用レジスタ</h3>
+
+<table class="basicTable centeredTable">
+<tr><th>&nbsp;</th><th colspan="2">メイン</th><th colspan="2">代替</th></tr>
+<tr><th>レジスタペア</th><th>上位</th><th>下位</th><th>上位</th><th>下位</th></tr>
+<tr><td><code>BC</code></td><td><code>B</code></td><td><code>C</code></td><td><code>B'</code></td><td><code>C'</code></td></tr>
+<tr><td><code>DE</code></td><td><code>D</code></td><td><code>E</code></td><td><code>D'</code></td><td><code>E'</code></td></tr>
+<tr><td><code>HL</code></td><td><code>H</code></td><td><code>L</code></td><td><code>H'</code></td><td><code>L'</code></td></tr>
+</table>
+
+<p>
+<code>B, C, D, E, H, L</code> レジスタは各8ビットで、2個のレジスタを合わせて16ビットのレジスタペアとして扱える。<br>
+<code>B', C', D', E', H', L'</code> レジスタは各8ビットで、<code>EXX</code> 命令により同時にそれぞれ対応するレジスタと値を入れ替えることができる。
+</p>
+
+<h3>特殊レジスタ</h3>
+
+<table class="basicTable firstColumnCenteredTable">
+<tr><th>レジスタ</th><th>サイズ</th><th>名前</th><th>説明</th></tr>
+<tr><td><code>PC</code></td><td>16ビット</td><td>Program Counter</td><td>実行するためにメモリから読み込む命令の位置を格納する。</td></tr>
+<tr><td><code>SP</code></td><td>16ビット</td><td>Stack Pointer</td><td>スタックトップのアドレスを格納する。</td></tr>
+<tr><td><code>IX</code></td><td rowspan="2">16ビット</td><td rowspan="2">Index Register</td><td rowspan="2">即値のオフセット付きでメモリにアクセスするときのベースアドレスを格納する。</td></tr>
+<tr><td><code>IY</code></td></tr>
+<tr><td><code>I</code></td><td>8ビット</td><td>Interrupt Vector</td><td>割り込みモード2で参照するテーブルのアドレスの上位を格納する。</td></tr>
+<tr><td><code>R</code></td><td>8ビット</td><td>Memory Refresh</td><td>命令フェッチごとに下位7ビットをインクリメントする。</td></tr>
+</table>
 
 <h2>参考資料</h2>
 
