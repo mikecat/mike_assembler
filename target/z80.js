@@ -270,28 +270,6 @@ const z80Target = (function() {
 			const apis = context.apis;
 			const opUpper1 = ops[0].toUpperCase(), opUpper2 = ops[1].toUpperCase();
 			const opParsed1 = apis.parse(apis.tokenize(ops[0])), opParsed2 = apis.parse(apis.tokenize(ops[1]));
-			if (opUpper1 === "A") {
-				if (opUpper2 === "I") return [0xed, 0x57]; // LD A, I
-				if (opUpper2 === "R") return [0xed, 0x5f]; // LD A, R
-				const mem = parseMemory(opParsed2, BCDE, context);
-				if (mem !== null) {
-					if (mem.reg === "BC") return [0x0a]; // LD A, (BC)
-					if (mem.reg === "DE") return [0x1a]; // LD A, (DE)
-					if ("disp" in mem) {
-						// LD A, (nn)
-						const nn = mem.disp;
-						if (nn !== null && !apis.fitsInBitsUnsigned(nn, 16)) {
-							throw "address out-of-range";
-						}
-						if (nn === null) {
-							return [0x3a, null, null];
-						} else {
-							const nnNumber = apis.fromBigInt(nn);
-							return [0x3a, nnNumber & 0xff, (nnNumber >> 8) & 0xff];
-						}
-					}
-				}
-			}
 			if (opUpper1 in regTable.r) {
 				if (opUpper2 in regTable.r) {
 					// LD r, r'
@@ -316,6 +294,28 @@ const z80Target = (function() {
 						];
 					}
 				}
+				if (opUpper1 === "A") {
+					if (opUpper2 === "I") return [0xed, 0x57]; // LD A, I
+					if (opUpper2 === "R") return [0xed, 0x5f]; // LD A, R
+					const mem = parseMemory(opParsed2, BCDE, context);
+					if (mem !== null) {
+						if (mem.reg === "BC") return [0x0a]; // LD A, (BC)
+						if (mem.reg === "DE") return [0x1a]; // LD A, (DE)
+						if ("disp" in mem) {
+							// LD A, (nn)
+							const nn = mem.disp;
+							if (nn !== null && !apis.fitsInBitsUnsigned(nn, 16)) {
+								throw "address out-of-range";
+							}
+							if (nn === null) {
+								return [0x3a, null, null];
+							} else {
+								const nnNumber = apis.fromBigInt(nn);
+								return [0x3a, nnNumber & 0xff, (nnNumber >> 8) & 0xff];
+							}
+						}
+					}
+				}
 				// LD r, n
 				const n = apis.evaluate(opParsed2, context.vars, context.pass > 1);
 				if (n !== null && !apis.fitsInBitsSigned(n, 8) && !apis.fitsInBitsUnsigned(n, 8)) {
@@ -325,6 +325,27 @@ const z80Target = (function() {
 					0x06 | (regTable.r[opUpper1] << 3),
 					n === null ? null : apis.fromBigInt(n) & 0xff
 				];
+			}
+			if (opUpper2 in regTable.r) {
+				const mem = parseMemory(opParsed1, HLIXdIYd, context);
+				if (mem !== null) {
+					if (mem.reg === "HL") {
+						// LD (HL), r
+						return [0x70 | regTable.r[opUpper2]];
+					}
+					if (mem.reg === "IX" || mem.reg === "IY") {
+						// LD (IX+d), r  / LD (IY+d), r
+						const disp = ("disp" in mem) ? mem.disp : apis.toBigInt(0);
+						if (disp !== null && !apis.fitsInBitsSigned(disp, 8)) {
+							throw "displacement out-of-range";
+						}
+						return [
+							mem.reg === "IX" ? 0xdd : 0xfd,
+							0x70 | regTable.r[opUpper2],
+							disp === null ? null : apis.fromBigInt(disp) & 0xff
+						];
+					}
+				}
 			}
 			if (opUpper2 === "A") {
 				if (opUpper1 === "I") return [0xed, 0x47]; // LD I, A
@@ -345,27 +366,6 @@ const z80Target = (function() {
 							const nnNumber = apis.fromBigInt(nn);
 							return [0x32, nnNumber & 0xff, (nnNumber >> 8) & 0xff];
 						}
-					}
-				}
-			}
-			if (opUpper2 in regTable.r) {
-				const mem = parseMemory(opParsed1, HLIXdIYd, context);
-				if (mem !== null) {
-					if (mem.reg === "HL") {
-						// LD (HL), r
-						return [0x70 | regTable.r[opUpper2]];
-					}
-					if (mem.reg === "IX" || mem.reg === "IY") {
-						// LD (IX+d), r  / LD (IY+d), r
-						const disp = ("disp" in mem) ? mem.disp : apis.toBigInt(0);
-						if (disp !== null && !apis.fitsInBitsSigned(disp, 8)) {
-							throw "displacement out-of-range";
-						}
-						return [
-							mem.reg === "IX" ? 0xdd : 0xfd,
-							0x70 | regTable.r[opUpper2],
-							disp === null ? null : apis.fromBigInt(disp) & 0xff
-						];
 					}
 				}
 			}
