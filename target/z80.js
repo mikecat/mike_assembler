@@ -232,11 +232,12 @@ const z80Target = (function() {
 	//   ast : パース対象のASTノード
 	//   allowedRegs : レジスタとしてとりうる文字列をキーとする連想配列
 	//                 値は +d を許可する : true 許可しない : false
+	//   allowImmediate : 値単体 (nn) を許可するかを表す真理値 (許可する : true 許可しない : false)
 	//   context : アセンブラのコンテキスト
 	// 戻り値 : 以下の属性を持つオブジェクト、または null (形式がマッチしない場合)
 	//   reg : IX のところ (無い場合は属性なし)
 	//   disp : +d のところ (無い場合は属性なし、値が確定しない場合に null をとりうる)
-	const parseMemory = function(ast, allowedRegs, context) {
+	const parseMemory = function(ast, allowedRegs, allowImmediate, context) {
 		if (ast.kind !== "op" || ast.value !== "()" || ast.children.length !== 1) return null;
 		const node1 = ast.children[0];
 		if (node1.kind === "value") {
@@ -257,8 +258,11 @@ const z80Target = (function() {
 				}
 			}
 		}
-		// (0x1234) とか (hoge) とか (+BC) とか (値単体)
-		return {"disp": context.apis.evaluate(node1, context.vars, context.pass > 1)};
+		if (allowImmediate) {
+			// (0x1234) とか (hoge) とか (+BC) とか (値単体)
+			return {"disp": context.apis.evaluate(node1, context.vars, context.pass > 1)};
+		}
+		return null;
 	};
 
 	const HLIXdIYd = {"HL": false, "IX": true, "IY": true};
@@ -275,7 +279,7 @@ const z80Target = (function() {
 					// LD r, r'
 					return [0x40 | (regTable.r[opUpper1] << 3) | regTable.r[opUpper2]];
 				}
-				const mem = parseMemory(opParsed2, HLIXdIYd, context);
+				const mem = parseMemory(opParsed2, HLIXdIYd, false, context);
 				if (mem !== null) {
 					if (mem.reg === "HL") {
 						// LD r, (HL)
@@ -297,7 +301,7 @@ const z80Target = (function() {
 				if (opUpper1 === "A") {
 					if (opUpper2 === "I") return [0xed, 0x57]; // LD A, I
 					if (opUpper2 === "R") return [0xed, 0x5f]; // LD A, R
-					const mem = parseMemory(opParsed2, BCDE, context);
+					const mem = parseMemory(opParsed2, BCDE, true, context);
 					if (mem !== null) {
 						if (mem.reg === "BC") return [0x0a]; // LD A, (BC)
 						if (mem.reg === "DE") return [0x1a]; // LD A, (DE)
@@ -327,7 +331,7 @@ const z80Target = (function() {
 				];
 			}
 			if (opUpper2 in regTable.r) {
-				const mem = parseMemory(opParsed1, HLIXdIYd, context);
+				const mem = parseMemory(opParsed1, HLIXdIYd, false, context);
 				if (mem !== null) {
 					if (mem.reg === "HL") {
 						// LD (HL), r
@@ -350,7 +354,7 @@ const z80Target = (function() {
 			if (opUpper2 === "A") {
 				if (opUpper1 === "I") return [0xed, 0x47]; // LD I, A
 				if (opUpper1 === "R") return [0xed, 0x4f]; // LD R, A
-				const mem = parseMemory(opParsed1, BCDE, context);
+				const mem = parseMemory(opParsed1, BCDE, true, context);
 				if (mem !== null) {
 					if (mem.reg === "BC") return [0x02]; // LD (BC), A
 					if (mem.reg === "DE") return [0x12]; // LD (DE), A
@@ -375,7 +379,7 @@ const z80Target = (function() {
 				if (opUpper2 === "IY") return [0xfd, 0xf9]; // LD SP, IY
 			}
 			if (opUpper1 === "HL" || opUpper1 === "IX" || opUpper1 === "IY" || (opUpper1 in regTable.dd)) {
-				const mem = parseMemory(opParsed2, {}, context);
+				const mem = parseMemory(opParsed2, {}, true, context);
 				let opCode = null, nn = null;
 				if (mem !== null && ("disp" in mem)) {
 					// LD HL, (nn) / LD dd, (nn) / LD IX, (nn) / LD IY, (nn)
@@ -410,7 +414,7 @@ const z80Target = (function() {
 				}
 			}
 			if (opUpper2 === "HL" || opUpper2 === "IX" || opUpper2 === "IY" || (opUpper2 in regTable.dd)) {
-				const mem = parseMemory(opParsed1, {}, context);
+				const mem = parseMemory(opParsed1, {}, true, context);
 				if (mem !== null && ("disp" in mem)) {
 					// LD (nn), HL / LD (nn), dd / LD (nn), IX / LD (nn), IY
 					let opCode = null, nn = mem.disp;
@@ -432,7 +436,7 @@ const z80Target = (function() {
 					return opCode;
 				}
 			}
-			const mem = parseMemory(opParsed1, HLIXdIYd, context);
+			const mem = parseMemory(opParsed1, HLIXdIYd, false, context);
 			if (mem !== null) {
 				const n = apis.evaluate(opParsed2, context.vars, context.pass > 1);
 				if (n !== null && !apis.fitsInBitsUnsigned(n, 8) && !apis.fitsInBitsSigned(n, 8)) {
@@ -474,7 +478,7 @@ const z80Target = (function() {
 			return res;
 		}
 		const opParsed = apis.parse(apis.tokenize(ops[0]));
-		const mem = parseMemory(opParsed, HLIXdIYd, context);
+		const mem = parseMemory(opParsed, HLIXdIYd, false, context);
 		if (mem !== null) {
 			if (mem.reg === "HL") {
 				return table.HL.op;
@@ -721,7 +725,7 @@ const z80Target = (function() {
 		} else if (instUpper == "IN") {
 			if (ops.length !== 2) throw instUpper + " takes 2 arguments";
 			const regUpper = ops[0].toUpperCase();
-			const mem = parseMemory(apis.parse(apis.tokenize(ops[1])), {"C": false}, context);
+			const mem = parseMemory(apis.parse(apis.tokenize(ops[1])), {"C": false}, true, context);
 			resultData = null;
 			if (mem !== null) {
 				if (mem.reg === "C") {
@@ -742,7 +746,7 @@ const z80Target = (function() {
 			if (resultData === null) throw "invalid argument for " + instUpper;
 		} else if (instUpper == "OUT") {
 			if (ops.length !== 2) throw instUpper + " takes 2 arguments";
-			const mem = parseMemory(apis.parse(apis.tokenize(ops[0])), {"C": false}, context);
+			const mem = parseMemory(apis.parse(apis.tokenize(ops[0])), {"C": false}, true, context);
 			const regUpper = ops[1].toUpperCase();
 			resultData = null;
 			if (mem !== null) {
