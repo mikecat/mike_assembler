@@ -515,7 +515,7 @@ const z80Target = (function() {
 				throw "value out-of-range";
 			}
 			const bValue = apis.fromBigInt(b) & 7;
-			const tableCopy = Object.assign({}, table);
+			const tableCopy = JSON.parse(JSON.stringify(table));
 			for (let i = 0; i < keyList.length; i++) {
 				const t = tableCopy[keyList[i]];
 				if (b === null) {
